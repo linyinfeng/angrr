@@ -40,6 +40,16 @@ pub struct RunOptions {
     pub interactive: Interactive,
     #[arg(short, long, help = "never prompt, override by --interactive")]
     pub no_prompt: bool,
+    #[arg(short = 't', long, help = "remove target instead of the GC root")]
+    pub remove_target: bool,
+    #[arg(
+        short,
+        long,
+        help = "only delete owned GC roots\nshould be used with --remove-garget for non-root users"
+    )]
+    pub owned_only: bool,
+    #[arg(long, help = "include GC roots whose target has been removed")]
+    pub include_not_found: bool,
     #[arg(long)]
     pub dry_run: bool,
 }
@@ -50,7 +60,7 @@ pub struct CompletionOptions {
     pub shell: clap_complete::Shell,
 }
 
-#[derive(Clone, Debug, ValueEnum)]
+#[derive(Clone, Debug, ValueEnum, PartialEq, Eq)]
 pub enum Interactive {
     Never,
     Once,
