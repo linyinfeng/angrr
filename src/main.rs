@@ -5,6 +5,7 @@ use std::{
     io::{self, Write},
     os::unix::fs::MetadataExt,
     path::{Path, PathBuf},
+    sync::atomic::{AtomicUsize, Ordering},
     time::{Duration, SystemTime},
 };
 
@@ -31,7 +32,8 @@ fn main() -> anyhow::Result<()> {
     match options.command {
         options::Commands::Run(run_opts) => {
             let context = RunContext::new(run_opts)?;
-            context.run()
+            context.run()?;
+            context.finish()
         }
         options::Commands::Completion(gen_options) => {
             generate_shell_completions(gen_options, carte_name)
@@ -39,12 +41,13 @@ fn main() -> anyhow::Result<()> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct RunContext {
     options: RunOptions,
     uid: u32,
     now: SystemTime,
     term: Term,
+    statistic: Statistic,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -66,54 +69,32 @@ struct ToRemove<'c> {
     reason: Reason,
 }
 
+#[derive(Debug, Default)]
+struct Statistic {
+    traversed: Counter,
+    candidate: Counter,
+    removed: Counter,
+}
+
+#[derive(Debug, Default)]
+struct Counter(AtomicUsize);
+
 impl RunContext {
     fn new(options: RunOptions) -> anyhow::Result<Self> {
         let uid = uzers::get_current_uid();
         let now = SystemTime::now();
         let term = Term::stderr();
+        let statistic = Default::default();
         let mut context = Self {
             options,
             uid,
             now,
             term,
+            statistic,
         };
         context.adjust_options()?;
         log::debug!("options: {:#?}", context.options);
         Ok(context)
-    }
-
-    fn adjust_options(&mut self) -> anyhow::Result<()> {
-        if self.options.interactive != Interactive::Never {
-            let all_directory_is_owned = self.all_directory_is_owned()?;
-            if !all_directory_is_owned && (!self.options.owned_only || !self.options.remove_target)
-            {
-                let yes = Confirm::new()
-                    .with_prompt("Some directory is not owned by you, would you like to turn on the `--owned-only` and `--remove-target` options?")
-                    .interact_on(&self.term)
-                    .context("failed to prompt")?;
-                if yes {
-                    self.options.owned_only = true;
-                    self.options.remove_target = true;
-                }
-            }
-        }
-
-        if self.options.include_not_found && (self.options.owned_only || self.options.remove_target)
-        {
-            log::warn!("the `--include-not-found` option will be ignored because it is conflict with `--owned-only` and `--remove-target`");
-            self.options.include_not_found = false;
-        }
-        Ok(())
-    }
-
-    fn all_directory_is_owned(&self) -> anyhow::Result<bool> {
-        let mut is_uid_match = true;
-        for path in &self.options.directory {
-            let metadata = fs::metadata(path)
-                .with_context(|| format!("failed to read metadata of directory {path:?}"))?;
-            is_uid_match &= self.uid == metadata.uid();
-        }
-        Ok(is_uid_match)
     }
 
     fn run(&self) -> anyhow::Result<()> {
@@ -123,12 +104,14 @@ impl RunContext {
             let directory =
                 fs::read_dir(path).with_context(|| format!("failed to open directory {path:?}"))?;
             for entry in directory {
+                self.statistic.traversed.increase();
                 let link = entry.with_context(|| {
                     format!("failed to read directory entry from directory {path:?}")
                 })?;
                 let link_path = link.path();
                 match self.check(&link_path)? {
                     Some(reason) => {
+                        self.statistic.candidate.increase();
                         let to_remove = ToRemove {
                             context: self,
                             link_path,
@@ -165,6 +148,19 @@ impl RunContext {
             }
         }
 
+        Ok(())
+    }
+
+    fn finish(mut self) -> anyhow::Result<()> {
+        if !self.options.no_statistic {
+            writeln!(
+                self.term,
+                "{}",
+                self.term.style().bold().apply_to("Statistic")
+            )?;
+            self.term
+                .write_line(&self.statistic.format_with_style(&self.term))?;
+        }
         Ok(())
     }
 
@@ -214,6 +210,40 @@ impl RunContext {
             .interact_on(&self.term)
             .context("failed to prompt")
     }
+
+    fn adjust_options(&mut self) -> anyhow::Result<()> {
+        if self.options.interactive != Interactive::Never {
+            let all_directory_is_owned = self.all_directory_is_owned()?;
+            if !all_directory_is_owned && (!self.options.owned_only || !self.options.remove_target)
+            {
+                let yes = Confirm::new()
+                    .with_prompt("Some directory is not owned by you, would you like to turn on the `--owned-only` and `--remove-target` options?")
+                    .interact_on(&self.term)
+                    .context("failed to prompt")?;
+                if yes {
+                    self.options.owned_only = true;
+                    self.options.remove_target = true;
+                }
+            }
+        }
+
+        if self.options.include_not_found && (self.options.owned_only || self.options.remove_target)
+        {
+            log::warn!("the `--include-not-found` option will be ignored because it is conflict with `--owned-only` and `--remove-target`");
+            self.options.include_not_found = false;
+        }
+        Ok(())
+    }
+
+    fn all_directory_is_owned(&self) -> anyhow::Result<bool> {
+        let mut is_uid_match = true;
+        for path in &self.options.directory {
+            let metadata = fs::metadata(path)
+                .with_context(|| format!("failed to read metadata of directory {path:?}"))?;
+            is_uid_match &= self.uid == metadata.uid();
+        }
+        Ok(is_uid_match)
+    }
 }
 
 impl<'c> ToRemove<'c> {
@@ -258,6 +288,7 @@ impl<'c> ToRemove<'c> {
     }
 
     fn remove(&self) -> anyhow::Result<()> {
+        self.context.statistic.removed.increase();
         if !self.options().dry_run {
             if self.options().remove_target {
                 fs::remove_file(self.reason.target()?)
@@ -312,6 +343,33 @@ impl Reason {
             Reason::Expired { target, .. } => Ok(target),
             Reason::TargetNotFound => anyhow::bail!("failed to determine target"),
         }
+    }
+}
+
+impl Statistic {
+    fn format_with_style(self, term: &Term) -> String {
+        let traversed = self.traversed.done();
+        let candidate = self.candidate.done();
+        let removed = self.removed.done();
+        let kept = traversed - removed;
+        let num_style = |n| term.style().bold().apply_to(n);
+        [
+            format!("traversed: {}", num_style(traversed)),
+            format!("candidate: {}", num_style(candidate)),
+            format!("removed:   {}", num_style(removed)),
+            format!("kept:      {}", num_style(kept)),
+        ]
+        .join("\n")
+    }
+}
+
+impl Counter {
+    fn increase(&self) {
+        self.0.fetch_add(1, Ordering::Relaxed);
+    }
+
+    fn done(self) -> usize {
+        self.0.into_inner()
     }
 }
 

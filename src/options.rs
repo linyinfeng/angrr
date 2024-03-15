@@ -50,6 +50,8 @@ pub struct RunOptions {
     pub owned_only: bool,
     #[arg(long, help = "include GC roots whose target has been removed")]
     pub include_not_found: bool,
+    #[arg(long, help = "do not output statistic data")]
+    pub no_statistic: bool,
     #[arg(long)]
     pub dry_run: bool,
 }
