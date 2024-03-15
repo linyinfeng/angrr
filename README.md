@@ -9,7 +9,7 @@ This tool simply deletes auto GC roots based on the modified time of their symbo
 The following command deletes all auto GC roots in `/nix/var/nix/gcroots/auto` older than 7 days.
 
 ```bash
-nix run github:linyinfeng/angrr -- run --period 7d
+sudo nix run github:linyinfeng/angrr -- run --period 7d
 ```
 
 Use the `--dry-run` option to have a try.
