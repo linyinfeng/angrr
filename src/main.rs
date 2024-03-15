@@ -47,7 +47,7 @@ struct RunContext {
     uid: u32,
     now: SystemTime,
     term: Term,
-    statistic: Statistic,
+    statistic: Statistics,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -70,7 +70,7 @@ struct ToRemove<'c> {
 }
 
 #[derive(Debug, Default)]
-struct Statistic {
+struct Statistics {
     traversed: Counter,
     candidate: Counter,
     removed: Counter,
@@ -156,7 +156,7 @@ impl RunContext {
             writeln!(
                 self.term,
                 "{}",
-                self.term.style().bold().apply_to("Statistic")
+                self.term.style().bold().underlined().apply_to("Statistics")
             )?;
             self.term
                 .write_line(&self.statistic.format_with_style(&self.term))?;
@@ -346,7 +346,7 @@ impl Reason {
     }
 }
 
-impl Statistic {
+impl Statistics {
     fn format_with_style(self, term: &Term) -> String {
         let traversed = self.traversed.done();
         let candidate = self.candidate.done();
