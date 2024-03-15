@@ -1,0 +1,15 @@
+[package]
+name = "angrr"
+authors = [ "Lin Yinfeng <lin.yinfeng@outlook.com>" ]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Auto Nix GC Roots Retention"
+
+[dependencies]
+clap = { version = "*", features = [ "cargo", "derive" ] }
+clap_complete = "*"
+log = "*"
+pretty_env_logger = "*"
+anyhow = "*"
+humantime = "*"

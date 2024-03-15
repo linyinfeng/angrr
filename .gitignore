@@ -1,0 +1,9 @@
+result*
+.direnv
+target
+.vscode
+
+
+# Added by cargo
+
+/target

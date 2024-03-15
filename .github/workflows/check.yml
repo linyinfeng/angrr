@@ -1,0 +1,23 @@
+name: "Check"
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@main
+    - name: Install nix
+      uses: cachix/install-nix-action@master
+      with:
+        github_access_token: '${{ secrets.GITHUB_TOKEN }}'
+    - name: Setup cachix
+      uses: cachix/cachix-action@master
+      with:
+        name: linyinfeng
+        signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
+    - name: Nix flake check
+      run: nix flake check
