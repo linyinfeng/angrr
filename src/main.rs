@@ -1,11 +1,15 @@
 mod options;
 
 use std::{
-    fs,
-    io::{self, Write},
-    os::unix::fs::MetadataExt,
+    ffi::OsStr,
+    fs::{self, File},
+    io::{self, BufWriter, Write},
+    os::unix::{ffi::OsStrExt, fs::MetadataExt},
     path::{Path, PathBuf},
-    sync::atomic::{AtomicUsize, Ordering},
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Mutex,
+    },
     time::{Duration, SystemTime},
 };
 
@@ -47,6 +51,7 @@ struct RunContext {
     uid: u32,
     now: SystemTime,
     term: Term,
+    output: Option<Mutex<Output>>,
     statistic: Statistics,
 }
 
@@ -76,6 +81,12 @@ struct Statistics {
     removed: Counter,
 }
 
+#[derive(Debug)]
+struct Output {
+    writer: BufWriter<File>,
+    first_output: bool,
+}
+
 #[derive(Debug, Default)]
 struct Counter(AtomicUsize);
 
@@ -84,12 +95,26 @@ impl RunContext {
         let uid = uzers::get_current_uid();
         let now = SystemTime::now();
         let term = Term::stderr();
+        let output = match &options.output {
+            Some(path) => {
+                let writer = BufWriter::new(
+                    File::create(path)
+                        .with_context(|| format!("failed to create output file {path:?}"))?,
+                );
+                Some(Mutex::new(Output {
+                    writer,
+                    first_output: true,
+                }))
+            }
+            None => None,
+        };
         let statistic = Default::default();
         let mut context = Self {
             options,
             uid,
             now,
             term,
+            output,
             statistic,
         };
         context.adjust_options()?;
@@ -289,14 +314,18 @@ impl<'c> ToRemove<'c> {
 
     fn remove(&self) -> anyhow::Result<()> {
         self.context.statistic.removed.increase();
+        let path_to_remove = if self.options().remove_target {
+            self.reason.target()?
+        } else {
+            &self.link_path
+        };
         if !self.options().dry_run {
-            if self.options().remove_target {
-                fs::remove_file(self.reason.target()?)
-                    .with_context(|| format!("failed to remove {:?}", self.reason.target()))?;
-            } else {
-                fs::remove_file(&self.link_path)
-                    .with_context(|| format!("failed to remove {:?}", self.link_path))?;
-            }
+            fs::remove_file(path_to_remove)
+                .with_context(|| format!("failed to remove {:?}", path_to_remove))?;
+        }
+        if let Some(output) = &self.context.output {
+            let mut out = output.lock().unwrap();
+            out.output(path_to_remove, &self.options().output_delimiter)?;
         }
         Ok(())
     }
@@ -370,6 +399,19 @@ impl Counter {
 
     fn done(self) -> usize {
         self.0.into_inner()
+    }
+}
+
+impl Output {
+    fn output<P: AsRef<Path>>(&mut self, path: P, delimiter: &OsStr) -> anyhow::Result<()> {
+        let p = path.as_ref();
+        if !self.first_output {
+            self.writer.write_all(delimiter.as_bytes())?;
+        } else {
+            self.first_output = false;
+        }
+        self.writer.write_all(p.as_os_str().as_bytes())?;
+        Ok(())
     }
 }
 

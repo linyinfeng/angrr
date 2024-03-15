@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand, ValueEnum};
 
-use std::{path::PathBuf, time::Duration};
+use std::{ffi::OsString, path::PathBuf, time::Duration};
 
 #[derive(Clone, Debug, Parser)]
 #[command(author, version, about, long_about = None)]
@@ -52,6 +52,22 @@ pub struct RunOptions {
     pub include_not_found: bool,
     #[arg(long, help = "do not output statistic data")]
     pub no_statistic: bool,
+    #[arg(
+        short,
+        long,
+        value_name = "FILE",
+        help = "output removed paths to file"
+    )]
+    pub output: Option<PathBuf>,
+    #[arg(
+        long,
+        help = "output delimiter",
+        default_value = "\n",
+        default_value_if("null_output_delimiter", "true", "\0")
+    )]
+    pub output_delimiter: OsString,
+    #[arg(long, help = "use \\0 as the output delimiter")]
+    pub null_output_delimiter: bool,
     #[arg(long)]
     pub dry_run: bool,
 }
