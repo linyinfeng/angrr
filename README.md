@@ -18,3 +18,18 @@ For the syntax of `--period <PERIOD>`, please refer to [the documentation of hum
 ## Flake Usage
 
 An overlay `overlays.default` and a NixOS module `nixosModules.angrr` is provided.
+
+A NixOS module example:
+
+```nix
+{ ... }:
+{
+  services.angrr = {
+    enable = true;
+    period = "2weeks";
+    dates = "03:00";
+  };
+}
+```
+
+This configuration will trigger angrr at 3:00 AM every day, and the retention period is 2 weeks.
