@@ -6,11 +6,13 @@ This tool simply deletes auto GC roots based on the modified time of their symbo
 
 ## Usage
 
+The following command deletes all auto GC roots in `/nix/var/nix/gcroots/auto` older than 7 days.
+
 ```bash
 nix run github:linyinfeng/angrr -- run --period 7d
 ```
 
-Use the `--dry-run` option to try.
+Use the `--dry-run` option to have a try.
 Use the `--help` option for more options.
 
 For the syntax of `--period <PERIOD>`, please refer to [the documentation of humantime::parse_duration](https://docs.rs/humantime/latest/humantime/fn.parse_duration.html).
