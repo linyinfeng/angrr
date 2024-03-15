@@ -46,7 +46,10 @@ in
     systemd.services.angrr = {
       description = "Auto Nix GC Roots Retention";
       script = ''
-        ${cfg.package}/bin/angrr run --period "${cfg.period}" ${lib.escapeShellArgs cfg.extraArgs}
+        ${cfg.package}/bin/angrr run \
+          --period "${cfg.period}" \
+          --no-prompt \
+          ${lib.escapeShellArgs cfg.extraArgs}
       '';
       serviceConfig = {
         Type = "oneshot";

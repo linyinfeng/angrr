@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 
 use std::{path::PathBuf, time::Duration};
 
@@ -18,10 +18,28 @@ pub enum Commands {
 #[derive(Clone, Debug, Parser)]
 #[command(about = "Do retention")]
 pub struct RunOptions {
-    #[arg(short, long, default_value = "/nix/var/nix/gcroots/auto")]
+    #[arg(
+        short,
+        long,
+        default_value = "/nix/var/nix/gcroots/auto",
+        help = "directories containing auto GC roots"
+    )]
     pub directory: Vec<PathBuf>,
-    #[arg(short, long, value_parser = humantime::parse_duration)]
+    #[arg(short, long, value_parser = humantime::parse_duration, help = "retention period")]
     pub period: Duration,
+    #[arg(
+        long,
+        value_name = "WHEN",
+        help = "prompt according to WHEN: never, once, or always",
+        default_value = "once",
+        num_args = 0..=1,
+        require_equals = true,
+        default_missing_value = "always",
+        default_value_if("no_prompt", "true", "never")
+    )]
+    pub interactive: Interactive,
+    #[arg(short, long, help = "never prompt, override by --interactive")]
+    pub no_prompt: bool,
     #[arg(long)]
     pub dry_run: bool,
 }
@@ -30,4 +48,11 @@ pub struct RunOptions {
 #[command(about = "Generate shell completions")]
 pub struct CompletionOptions {
     pub shell: clap_complete::Shell,
+}
+
+#[derive(Clone, Debug, ValueEnum)]
+pub enum Interactive {
+    Never,
+    Once,
+    Always,
 }
