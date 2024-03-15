@@ -48,8 +48,7 @@ in
       script = ''
         ${cfg.package}/bin/angrr run \
           --period "${cfg.period}" \
-          --no-prompt \
-          ${lib.escapeShellArgs cfg.extraArgs}
+          --no-prompt ${lib.escapeShellArgs cfg.extraArgs}
       '';
       serviceConfig = {
         Type = "oneshot";
