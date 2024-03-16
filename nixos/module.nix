@@ -27,7 +27,13 @@ in
           The retention period of auto GC roots.
         '';
       };
-      removeRoot = lib.mkEnableOption "angrr --remove-root option";
+      removeRoot = lib.mkOption {
+        type = with lib.types; bool;
+        default = true;
+        description = ''
+          Whether to pass the `--remove-root` option to angrr.
+        '';
+      };
       extraArgs = lib.mkOption {
         type = with lib.types; listOf str;
         default = [ ];
