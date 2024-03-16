@@ -78,6 +78,7 @@ struct ToRemove<'c> {
 struct Statistics {
     traversed: Counter,
     candidate: Counter,
+    invalid: Counter,
     removed: Counter,
 }
 
@@ -217,10 +218,63 @@ impl RunContext {
             .duration_since(target_mtime)
             .unwrap_or_else(|_| Duration::new(0, 0));
         log::trace!("elapsed: {}", humantime::format_duration(elapsed));
-        if elapsed > self.options.period {
-            Ok(Some(Reason { target, elapsed }))
+        if elapsed <= self.options.period {
+            return Ok(None);
+        }
+
+        Ok(Some(Reason { target, elapsed }))
+    }
+
+    fn validate<P: AsRef<Path>>(&self, target: P) -> anyhow::Result<bool> {
+        let target = target.as_ref();
+        let final_target = fs::canonicalize(target)
+            .with_context(|| format!("failed to canonicalize {target:?} for validation"))?;
+        Ok(final_target.starts_with(&self.options.store))
+    }
+
+    fn validate_and_prompt<P: AsRef<Path>>(&self, target: P) -> anyhow::Result<bool> {
+        let target = target.as_ref();
+        if !self.validate(target)? {
+            self.statistic.invalid.increase();
+            let mut term = self.term.clone();
+            let fail_message_style = if self.options.force {
+                term.style().bold().yellow()
+            } else {
+                term.style().bold().red()
+            };
+            writeln!(
+                term,
+                "{}, target {:?} does not point into store {:?}",
+                fail_message_style.apply_to("Validation failed"),
+                term.style().underlined().apply_to(&target),
+                self.options.store
+            )?;
+            let notify = |action| {
+                writeln!(
+                    term.clone(),
+                    "> {}",
+                    term.style().bold().yellow().apply_to(action)
+                )
+            };
+            let notify_then_continue = || {
+                notify("continue")?;
+                Ok(true)
+            };
+            let notify_then_ignored = || {
+                notify("ignore")?;
+                Ok(false)
+            };
+            if self.options.force {
+                notify_then_continue()
+            } else if self.options.interactive == Interactive::Never {
+                notify_then_ignored()
+            } else if self.prompt()? {
+                notify_then_continue()
+            } else {
+                notify_then_ignored()
+            }
         } else {
-            Ok(None)
+            Ok(true)
         }
     }
 
@@ -261,7 +315,7 @@ impl<'c> ToRemove<'c> {
                 term,
                 "{} {:?}",
                 action.format_with_style(&term),
-                self.reason.target()?
+                self.reason.target
             )?;
             if with_reason {
                 term.write_line(&add_indent(
@@ -274,16 +328,21 @@ impl<'c> ToRemove<'c> {
     }
 
     fn remove(&self) -> anyhow::Result<()> {
-        self.context.statistic.removed.increase();
         let path_to_remove = if self.options().remove_root {
             &self.link_path
         } else {
-            self.reason.target()?
+            // validate before remove target
+            let target = &self.reason.target;
+            if !self.context.validate_and_prompt(target)? {
+                return Ok(());
+            }
+            target
         };
         if !self.options().dry_run {
             fs::remove_file(path_to_remove)
                 .with_context(|| format!("failed to remove {:?}", path_to_remove))?;
         }
+        self.context.statistic.removed.increase();
         if let Some(output) = &self.context.output {
             let mut out = output.lock().unwrap();
             out.output(path_to_remove, &self.options().output_delimiter)?;
@@ -323,10 +382,6 @@ impl Reason {
             term.style().bold().apply_to(format_duration(*elapsed))
         )
     }
-
-    fn target(&self) -> anyhow::Result<&Path> {
-        Ok(&self.target)
-    }
 }
 
 impl Statistics {
@@ -334,12 +389,14 @@ impl Statistics {
         let traversed = self.traversed.done();
         let candidate = self.candidate.done();
         let removed = self.removed.done();
+        let invalid = self.invalid.done();
         let kept = traversed - removed;
         let num_style = |n| term.style().bold().apply_to(n);
         [
             format!("traversed: {}", num_style(traversed)),
             format!("candidate: {}", num_style(candidate)),
             format!("removed:   {}", num_style(removed)),
+            format!("invalid:   {}", num_style(invalid)),
             format!("kept:      {}", num_style(kept)),
         ]
         .join("\n")

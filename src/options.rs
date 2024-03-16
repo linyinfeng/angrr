@@ -2,7 +2,7 @@ use clap::{ArgAction, Parser, Subcommand, ValueEnum};
 
 use std::{ffi::OsString, path::PathBuf, time::Duration};
 
-const HELP_TEMPLATE: &'static str = "\
+const HELP_TEMPLATE: &str = "\
 {before-help}{name} {version}
 {author-with-newline}{about-with-newline}
 {usage-heading} {usage}
@@ -82,6 +82,20 @@ also set `--owned-only=false` as default value of `--owned-only`"
         default_value_if("remove_root", "true", "false")
     )]
     pub owned_only: bool,
+    #[arg(
+        long,
+        help = "\
+force delete targets of GC roots that do not point to store
+validation only happens when `--remove-root` is not specified"
+    )]
+    pub force: bool,
+    #[arg(
+        long,
+        value_name = "PATH",
+        help = "store path for validation",
+        default_value = "/nix/store"
+    )]
+    pub store: PathBuf,
     #[arg(long, help = "do not output statistic data")]
     pub no_statistic: bool,
     #[arg(long, value_name = "FILE", help = "output removed paths to file")]
