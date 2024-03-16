@@ -147,7 +147,6 @@ impl RunContext {
                                 to_remove.notify(Action::AboutToRemove, true)?;
                                 let yes = self.prompt()?;
                                 if yes {
-                                    to_remove.notify(Action::Remove, false)?;
                                     to_remove.remove()?;
                                 }
                             }
@@ -156,7 +155,6 @@ impl RunContext {
                                 waiting.push(to_remove);
                             }
                             Interactive::Never => {
-                                to_remove.notify(Action::Remove, true)?;
                                 to_remove.remove()?;
                             }
                         }
@@ -168,7 +166,6 @@ impl RunContext {
 
         if !waiting.is_empty() && self.prompt()? {
             for to_remove in &waiting {
-                to_remove.notify(Action::Remove, false)?;
                 to_remove.remove()?;
             }
         }
@@ -338,6 +335,7 @@ impl<'c> ToRemove<'c> {
             }
             target
         };
+        self.notify(Action::Remove, false)?;
         if !self.options().dry_run {
             fs::remove_file(path_to_remove)
                 .with_context(|| format!("failed to remove {:?}", path_to_remove))?;
