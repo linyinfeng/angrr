@@ -59,6 +59,7 @@ struct RunContext {
 enum Action {
     Remove,
     AboutToRemove,
+    Ignored,
 }
 
 #[derive(Debug, Clone)]
@@ -148,6 +149,8 @@ impl RunContext {
                                 let yes = self.prompt()?;
                                 if yes {
                                     to_remove.remove()?;
+                                } else {
+                                    to_remove.notify(Action::Ignored, true)?;
                                 }
                             }
                             Interactive::Once => {
@@ -246,29 +249,14 @@ impl RunContext {
                 term.style().underlined().apply_to(&target),
                 self.options.store
             )?;
-            let notify = |action| {
-                writeln!(
-                    term.clone(),
-                    "> {}",
-                    term.style().bold().yellow().apply_to(action)
-                )
-            };
-            let notify_then_continue = || {
-                notify("continue")?;
-                Ok(true)
-            };
-            let notify_then_ignored = || {
-                notify("ignore")?;
-                Ok(false)
-            };
             if self.options.force {
-                notify_then_continue()
+                Ok(true)
             } else if self.options.interactive == Interactive::Never {
-                notify_then_ignored()
+                Ok(false)
             } else if self.prompt()? {
-                notify_then_continue()
+                Ok(true)
             } else {
-                notify_then_ignored()
+                Ok(false)
             }
         } else {
             Ok(true)
@@ -331,6 +319,7 @@ impl<'c> ToRemove<'c> {
             // validate before remove target
             let target = &self.reason.target;
             if !self.context.validate_and_prompt(target)? {
+                self.notify(Action::Ignored, false)?;
                 return Ok(());
             }
             target
@@ -359,6 +348,7 @@ impl Action {
                 .bold()
                 .apply_to("About to remove")
                 .to_string(),
+            Action::Ignored => term.style().cyan().bold().apply_to("Ignore").to_string(),
         }
     }
 }
