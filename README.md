@@ -42,14 +42,16 @@ A NixOS module example:
 ```nix
 { ... }:
 {
+  nix.gc.automatic = true;
   services.angrr = {
     enable = true;
     period = "2weeks";
-    dates = "03:00";
   };
 }
 ```
 
-This configuration will trigger angrr at 3:00 AM every day,
+This configuration will automatically trigger angrr before `nix-gc.service`,
 and the retention period is 2 weeks,
 the `--owned-only=false` option will be passed by default so that the service manages auto GC roots for all users.
+
+Read [nixos/module.nix](./nixos/module.nix) for more information.
