@@ -52,4 +52,4 @@ A NixOS module example:
 
 This configuration will trigger angrr at 3:00 AM every day,
 and the retention period is 2 weeks,
-the `--remove-root` option will be passed by default.
+the `--owned-only=false` option will be passed by default so that the service manages auto GC roots for all users.

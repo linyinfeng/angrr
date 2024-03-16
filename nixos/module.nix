@@ -29,10 +29,18 @@ in
       };
       removeRoot = lib.mkOption {
         type = with lib.types; bool;
-        default = true;
+        default = false;
         description = ''
           Whether to pass the `--remove-root` option to angrr.
         '';
+      };
+      ownedOnly = lib.mkOption {
+        type = with lib.types; bool;
+        default = false;
+        description = ''
+          Control the `--remove-root=<true|false>` option of angrr.
+        '';
+        apply = b: if b then "true" else "false";
       };
       extraArgs = lib.mkOption {
         type = with lib.types; listOf str;
@@ -56,6 +64,7 @@ in
         ${cfg.package}/bin/angrr run \
           --period "${cfg.period}" \
           ${lib.optionalString cfg.removeRoot "--remove-root"} \
+          --owned-only="${cfg.ownedOnly}" \
           --no-prompt ${lib.escapeShellArgs cfg.extraArgs}
       '';
       serviceConfig = {
