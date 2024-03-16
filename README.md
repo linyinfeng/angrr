@@ -6,7 +6,7 @@ This tool simply deletes auto GC roots based on the modified time of their symbo
 
 ## Usage
 
-* For non-root users:
+- For non-root users:
 
   The following command deletes all auto GC roots older than 7 days owned by the current user.
 
@@ -14,7 +14,7 @@ This tool simply deletes auto GC roots based on the modified time of their symbo
   nix run github:linyinfeng/angrr -- run --period 7d
   ```
 
-* Manage GC roots for all users as the root user:
+- Manage GC roots for all users as the root user:
 
   The following command deletes all auto GC roots older than 7 days owned by all users.
 

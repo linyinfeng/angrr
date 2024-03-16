@@ -87,7 +87,8 @@
               programs = {
                 nixfmt-rfc-style.enable = true;
                 rustfmt.enable = true;
-                shfmt.enable = true;
+                prettier.enable = true;
+                taplo.enable = true;
               };
             };
             devShells.default = pkgs.mkShell {
