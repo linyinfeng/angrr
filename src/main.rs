@@ -62,9 +62,9 @@ enum Action {
 }
 
 #[derive(Debug, Clone)]
-enum Reason {
-    Expired { target: PathBuf, elapsed: Duration },
-    TargetNotFound,
+struct Reason {
+    target: PathBuf,
+    elapsed: Duration,
 }
 
 #[derive(Debug, Clone)]
@@ -109,7 +109,7 @@ impl RunContext {
             None => None,
         };
         let statistic = Default::default();
-        let mut context = Self {
+        let context = Self {
             options,
             uid,
             now,
@@ -117,7 +117,6 @@ impl RunContext {
             output,
             statistic,
         };
-        context.adjust_options()?;
         log::debug!("options: {:#?}", context.options);
         Ok(context)
     }
@@ -161,7 +160,7 @@ impl RunContext {
                             }
                         }
                     }
-                    None => log::debug!("keep {link_path:?}"),
+                    None => log::trace!("keep {link_path:?}"),
                 }
             }
         }
@@ -193,15 +192,12 @@ impl RunContext {
         let link_path = link_path.as_ref();
         let target = fs::read_link(link_path)
             .with_context(|| format!("failed to read symbolic link {link_path:?}"))?;
-        log::debug!("processing {link_path:?} -> {target:?}");
+        log::trace!("processing {link_path:?} -> {target:?}");
         let metadata = match fs::symlink_metadata(&target) {
             Ok(m) => m,
             Err(e) if e.kind() == io::ErrorKind::NotFound => {
-                if self.options.include_not_found {
-                    return Ok(Some(Reason::TargetNotFound));
-                } else {
-                    return Ok(None);
-                }
+                log::debug!("target of {link_path:?} not found, skip");
+                return Ok(None);
             }
             e => e.with_context(|| format!("failed to read metadata of file {target:?}"))?,
         };
@@ -220,9 +216,9 @@ impl RunContext {
             .now
             .duration_since(target_mtime)
             .unwrap_or_else(|_| Duration::new(0, 0));
-        log::debug!("elapsed: {}", humantime::format_duration(elapsed));
+        log::trace!("elapsed: {}", humantime::format_duration(elapsed));
         if elapsed > self.options.period {
-            Ok(Some(Reason::Expired { target, elapsed }))
+            Ok(Some(Reason { target, elapsed }))
         } else {
             Ok(None)
         }
@@ -235,40 +231,6 @@ impl RunContext {
             .interact_on(&self.term)
             .context("failed to prompt")
     }
-
-    fn adjust_options(&mut self) -> anyhow::Result<()> {
-        if self.options.interactive != Interactive::Never {
-            let all_directory_is_owned = self.all_directory_is_owned()?;
-            if !all_directory_is_owned && (!self.options.owned_only || !self.options.remove_target)
-            {
-                let yes = Confirm::new()
-                    .with_prompt("Some directory is not owned by you, would you like to turn on the `--owned-only` and `--remove-target` options?")
-                    .interact_on(&self.term)
-                    .context("failed to prompt")?;
-                if yes {
-                    self.options.owned_only = true;
-                    self.options.remove_target = true;
-                }
-            }
-        }
-
-        if self.options.include_not_found && (self.options.owned_only || self.options.remove_target)
-        {
-            log::warn!("the `--include-not-found` option will be ignored because it is conflict with `--owned-only` and `--remove-target`");
-            self.options.include_not_found = false;
-        }
-        Ok(())
-    }
-
-    fn all_directory_is_owned(&self) -> anyhow::Result<bool> {
-        let mut is_uid_match = true;
-        for path in &self.options.directory {
-            let metadata = fs::metadata(path)
-                .with_context(|| format!("failed to read metadata of directory {path:?}"))?;
-            is_uid_match &= self.uid == metadata.uid();
-        }
-        Ok(is_uid_match)
-    }
 }
 
 impl<'c> ToRemove<'c> {
@@ -279,21 +241,7 @@ impl<'c> ToRemove<'c> {
     fn notify(&self, action: Action, with_reason: bool) -> anyhow::Result<()> {
         let mut term = self.context.term.clone();
         let reason_indent = 2;
-        if self.options().remove_target {
-            // remove target
-            writeln!(
-                term,
-                "{} {:?}",
-                action.format_with_style(&term),
-                self.reason.target()?
-            )?;
-            if with_reason {
-                term.write_line(&add_indent(
-                    &self.reason.format_with_style_no_target(&term),
-                    reason_indent,
-                ))?;
-            }
-        } else {
+        if self.options().remove_root {
             // remove link
             writeln!(
                 term,
@@ -307,17 +255,30 @@ impl<'c> ToRemove<'c> {
                     reason_indent,
                 ))?;
             }
+        } else {
+            // remove target
+            writeln!(
+                term,
+                "{} {:?}",
+                action.format_with_style(&term),
+                self.reason.target()?
+            )?;
+            if with_reason {
+                term.write_line(&add_indent(
+                    &self.reason.format_with_style_no_target(&term),
+                    reason_indent,
+                ))?;
+            }
         }
-
         Ok(())
     }
 
     fn remove(&self) -> anyhow::Result<()> {
         self.context.statistic.removed.increase();
-        let path_to_remove = if self.options().remove_target {
-            self.reason.target()?
-        } else {
+        let path_to_remove = if self.options().remove_root {
             &self.link_path
+        } else {
+            self.reason.target()?
         };
         if !self.options().dry_run {
             fs::remove_file(path_to_remove)
@@ -347,31 +308,24 @@ impl Action {
 
 impl Reason {
     fn format_with_style(&self, term: &Term) -> String {
-        match self {
-            Reason::Expired { target, elapsed } => format!(
-                "target {:?}\nwas last modified {} ago",
-                term.style().underlined().apply_to(target),
-                term.style().bold().apply_to(format_duration(*elapsed))
-            ),
-            Reason::TargetNotFound => "target not found".to_string(),
-        }
+        let Self { target, elapsed } = self;
+        format!(
+            "target {:?}\nwas last modified {} ago",
+            term.style().underlined().apply_to(target),
+            term.style().bold().apply_to(format_duration(*elapsed))
+        )
     }
 
     fn format_with_style_no_target(&self, term: &Term) -> String {
-        match self {
-            Reason::Expired { elapsed, .. } => format!(
-                "was last modified {} ago",
-                term.style().bold().apply_to(format_duration(*elapsed))
-            ),
-            Reason::TargetNotFound => "target not found".to_string(),
-        }
+        let Self { elapsed, .. } = self;
+        format!(
+            "was last modified {} ago",
+            term.style().bold().apply_to(format_duration(*elapsed))
+        )
     }
 
     fn target(&self) -> anyhow::Result<&Path> {
-        match self {
-            Reason::Expired { target, .. } => Ok(target),
-            Reason::TargetNotFound => anyhow::bail!("failed to determine target"),
-        }
+        Ok(&self.target)
     }
 }
 

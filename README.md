@@ -6,11 +6,27 @@ This tool simply deletes auto GC roots based on the modified time of their symbo
 
 ## Usage
 
-The following command deletes all auto GC roots in `/nix/var/nix/gcroots/auto` older than 7 days.
+* For non-root users:
 
-```bash
-sudo nix run github:linyinfeng/angrr -- run --period 7d
-```
+  The following command deletes all auto GC roots older than 7 days owned by the current user.
+
+  ```bash
+  nix run github:linyinfeng/angrr -- run --period 7d
+  ```
+
+* Manage GC roots for all users as the root user:
+
+  The following command deletes all auto GC roots older than 7 days owned by all users.
+
+  ```bash
+  sudo nix run github:linyinfeng/angrr -- run --period 7d --owned-only=false
+  ```
+
+  The following command deletes auto GC root links in `/nix/var/nix/gcroots/auto` instead of the symbolic link target of the roots.
+
+  ```bash
+  sudo nix run github:linyinfeng/angrr -- run --period 7d --remove-root
+  ```
 
 Use the `--dry-run` option to have a try.
 Use the `--help` option for more options.
@@ -34,4 +50,6 @@ A NixOS module example:
 }
 ```
 
-This configuration will trigger angrr at 3:00 AM every day, and the retention period is 2 weeks.
+This configuration will trigger angrr at 3:00 AM every day,
+and the retention period is 2 weeks,
+the `--remove-root` option will be passed by default.

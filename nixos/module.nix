@@ -27,6 +27,7 @@ in
           The retention period of auto GC roots.
         '';
       };
+      removeRoot = lib.mkEnableOption "angrr --remove-root option";
       extraArgs = lib.mkOption {
         type = with lib.types; listOf str;
         default = [ ];
@@ -48,6 +49,7 @@ in
       script = ''
         ${cfg.package}/bin/angrr run \
           --period "${cfg.period}" \
+          ${lib.optionalString cfg.removeRoot "--remove-root"} \
           --no-prompt ${lib.escapeShellArgs cfg.extraArgs}
       '';
       serviceConfig = {

@@ -21,11 +21,13 @@ pub struct RunOptions {
     #[arg(
         short,
         long,
+        value_name = "PATH",
         default_value = "/nix/var/nix/gcroots/auto",
         help = "directories containing auto GC roots"
     )]
     pub directory: Vec<PathBuf>,
-    #[arg(short, long, value_parser = humantime::parse_duration, help = "retention period")]
+    #[arg(short, long,
+        value_name = "DURATION", value_parser = humantime::parse_duration, help = "retention period")]
     pub period: Duration,
     #[arg(
         long,
@@ -40,16 +42,24 @@ pub struct RunOptions {
     pub interactive: Interactive,
     #[arg(short, long, help = "never prompt, override by --interactive")]
     pub no_prompt: bool,
-    #[arg(short = 't', long, help = "remove target instead of the GC root")]
-    pub remove_target: bool,
     #[arg(
         short,
         long,
-        help = "only delete owned GC roots\nshould be used with --remove-garget for non-root users"
+        help = "remove GC root instead of the symbolic link target of the root
+also set `--owned-only=false` as default value of `--owned-only`"
+    )]
+    pub remove_root: bool,
+    #[arg(
+        short,
+        long,
+        value_name = "BOOL",
+        help = "only delete owned symbolic link target of GC roots",
+        num_args = 0..=1,
+        require_equals = true,
+        default_value = "true",
+        default_value_if("remove_root", "true", "false")
     )]
     pub owned_only: bool,
-    #[arg(long, help = "include GC roots whose target has been removed")]
-    pub include_not_found: bool,
     #[arg(long, help = "do not output statistic data")]
     pub no_statistic: bool,
     #[arg(
@@ -61,6 +71,7 @@ pub struct RunOptions {
     pub output: Option<PathBuf>,
     #[arg(
         long,
+        value_name = "DELIMITER",
         help = "output delimiter",
         default_value = "\n",
         default_value_if("null_output_delimiter", "true", "\0")
