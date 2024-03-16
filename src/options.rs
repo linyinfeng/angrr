@@ -98,8 +98,16 @@ validation only happens when `--remove-root` is not specified"
     pub store: PathBuf,
     #[arg(long, help = "do not output statistic data")]
     pub no_statistic: bool,
-    #[arg(long, value_name = "FILE", help = "output removed paths to file")]
+    #[arg(
+        long,
+        value_name = "FILE",
+        help = "\
+output removed paths to file,
+when FILE is -, write to standard output"
+    )]
     pub output: Option<PathBuf>,
+    #[arg(long, help = "disable extra output buffer")]
+    pub output_unbuffered: bool,
     #[arg(
         long,
         value_name = "DELIMITER",

@@ -2,8 +2,9 @@ mod options;
 
 use std::{
     ffi::OsStr,
+    fmt::Debug,
     fs::{self, File},
-    io::{self, BufWriter, Write},
+    io::{self, sink, stdout, BufWriter, Write},
     os::unix::{ffi::OsStrExt, fs::MetadataExt},
     path::{Path, PathBuf},
     sync::{
@@ -36,6 +37,7 @@ fn main() -> anyhow::Result<()> {
     match options.command {
         options::Commands::Run(run_opts) => {
             let context = RunContext::new(run_opts)?;
+            log::trace!("context = {context:#?}");
             context.run()?;
             context.finish()
         }
@@ -51,7 +53,7 @@ struct RunContext {
     uid: u32,
     now: SystemTime,
     term: Term,
-    output: Option<Mutex<Output>>,
+    output: Mutex<Output>,
     statistic: Statistics,
 }
 
@@ -68,7 +70,7 @@ struct Reason {
     elapsed: Duration,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct ToRemove<'c> {
     context: &'c RunContext,
     link_path: PathBuf,
@@ -85,9 +87,12 @@ struct Statistics {
 
 #[derive(Debug)]
 struct Output {
-    writer: BufWriter<File>,
+    writer: Box<dyn OutputWriter>,
     first_output: bool,
 }
+
+trait OutputWriter: Write + Debug {}
+impl<T> OutputWriter for T where T: Write + Debug {}
 
 #[derive(Debug, Default)]
 struct Counter(AtomicUsize);
@@ -97,19 +102,10 @@ impl RunContext {
         let uid = uzers::get_current_uid();
         let now = SystemTime::now();
         let term = Term::stderr();
-        let output = match &options.output {
-            Some(path) => {
-                let writer = BufWriter::new(
-                    File::create(path)
-                        .with_context(|| format!("failed to create output file {path:?}"))?,
-                );
-                Some(Mutex::new(Output {
-                    writer,
-                    first_output: true,
-                }))
-            }
-            None => None,
-        };
+        let output = Mutex::new(Output {
+            writer: Self::output_writer(&options)?,
+            first_output: true,
+        });
         let statistic = Default::default();
         let context = Self {
             options,
@@ -186,6 +182,8 @@ impl RunContext {
             self.term
                 .write_line(&self.statistic.format_with_style(&self.term))?;
         }
+        let mut output = self.output.lock().unwrap();
+        output.writer.flush().context("failed to flush output")?;
         Ok(())
     }
 
@@ -270,6 +268,26 @@ impl RunContext {
             .interact_on(&self.term)
             .context("failed to prompt")
     }
+
+    fn output_writer(options: &RunOptions) -> anyhow::Result<Box<dyn OutputWriter>> {
+        match &options.output {
+            Some(path) => {
+                let mut writer: Box<dyn OutputWriter> = if *path == PathBuf::from("-") {
+                    Box::new(stdout())
+                } else {
+                    Box::new(
+                        File::create(path)
+                            .with_context(|| format!("failed to create output file {path:?}"))?,
+                    )
+                };
+                if !options.output_unbuffered {
+                    writer = Box::new(BufWriter::new(writer));
+                }
+                Ok(writer)
+            }
+            None => Ok(Box::new(sink())),
+        }
+    }
 }
 
 impl<'c> ToRemove<'c> {
@@ -330,10 +348,8 @@ impl<'c> ToRemove<'c> {
                 .with_context(|| format!("failed to remove {:?}", path_to_remove))?;
         }
         self.context.statistic.removed.increase();
-        if let Some(output) = &self.context.output {
-            let mut out = output.lock().unwrap();
-            out.output(path_to_remove, &self.options().output_delimiter)?;
-        }
+        let mut out = self.context.output.lock().unwrap();
+        out.output(path_to_remove, &self.options().output_delimiter)?;
         Ok(())
     }
 }
