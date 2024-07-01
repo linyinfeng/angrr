@@ -1,7 +1,7 @@
 name: "Automated update"
 on:
   schedule:
-    - cron: '0 16 * * *'
+    - cron: "0 16 * * *"
   workflow_dispatch:
   push:
     branches:
@@ -11,39 +11,39 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@main
-      with:
-        ref: main
-        token: '${{ secrets.PAT_FOR_AUTOMATED_UPDATE }}'
-    - name: Install nix
-      uses: cachix/install-nix-action@master
-      with:
-        github_access_token: '${{ secrets.GITHUB_TOKEN }}'
-    - name: Setup cachix
-      uses: cachix/cachix-action@master
-      with:
-        name: linyinfeng
-        signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
-    - name: Git config
-      run: |
-        git config --global user.email "nano@linyinfeng.com"
-        git config --global user.name "Nano"
-    - name: Nix flake update
-      run: |
-        nix flake update --commit-lock-file
-    - name: Cargo update
-      run: |
-        nix develop --command cargo update
-        if [ -z $(git status --porcelain) ]; then
-          echo "clean, skip..."
-        else
-          git add --all
-          git commit --message "Cargo update"
-        fi
-    - name: Nix flake check
-      run: |
-        nix flake check
-    - name: Git push
-      run: |
-        git push
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          ref: main
+          token: "${{ secrets.PAT_FOR_AUTOMATED_UPDATE }}"
+      - name: Install nix
+        uses: cachix/install-nix-action@master
+        with:
+          github_access_token: "${{ secrets.GITHUB_TOKEN }}"
+      - name: Setup cachix
+        uses: cachix/cachix-action@master
+        with:
+          name: linyinfeng
+          signingKey: "${{ secrets.CACHIX_SIGNING_KEY }}"
+      - name: Git config
+        run: |
+          git config --global user.email "nano@linyinfeng.com"
+          git config --global user.name "Nano"
+      - name: Nix flake update
+        run: |
+          nix flake update --commit-lock-file
+      - name: Cargo update
+        run: |
+          nix develop --command cargo update
+          if [ -z $(git status --porcelain) ]; then
+            echo "clean, skip..."
+          else
+            git add --all
+            git commit --message "Cargo update"
+          fi
+      - name: Nix flake check
+        run: |
+          nix flake check
+      - name: Git push
+        run: |
+          git push
