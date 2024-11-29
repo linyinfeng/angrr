@@ -84,7 +84,7 @@
             treefmt = {
               projectRootFile = "flake.nix";
               programs = {
-                nixfmt-rfc-style.enable = true;
+                nixfmt.enable = true;
                 rustfmt.enable = true;
                 prettier.enable = true;
                 taplo.enable = true;
