@@ -290,7 +290,7 @@ impl RunContext {
     }
 }
 
-impl<'c> ToRemove<'c> {
+impl ToRemove<'_> {
     fn options(&self) -> &RunOptions {
         &self.context.options
     }
