@@ -304,7 +304,7 @@ impl RunContext {
                 return true;
             }
         }
-        return false;
+        false
     }
 
     fn ignored_in_home<P: AsRef<Path>>(&self, target: P, metadata: &fs::Metadata) -> bool {
@@ -321,7 +321,7 @@ impl RunContext {
                 return true;
             }
         }
-        return false;
+        false
     }
 }
 
