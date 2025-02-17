@@ -1,5 +1,6 @@
 use clap::{ArgAction, Parser, Subcommand, ValueEnum};
 
+use core::fmt;
 use std::{ffi::OsString, path::PathBuf, time::Duration};
 
 const HELP_TEMPLATE: &str = "\
@@ -38,7 +39,7 @@ pub struct RunOptions {
         short,
         long,
         value_name = "PATH",
-        default_value = "/nix/var/nix/gcroots/auto",
+        default_values_os_t = [PathBuf::from("/nix/var/nix/gcroots/auto")],
         help = "directories containing auto GC roots"
     )]
     pub directory: Vec<PathBuf>,
@@ -53,7 +54,7 @@ pub struct RunOptions {
 prompt according to WHEN: never, once, or always
 `-i` or `--interactive` means `--interactive=always`
 ", // add a new line for default and possible values in help
-        default_value = "once",
+        default_value_t = Interactive::Once,
         num_args = 0..=1,
         require_equals = true,
         default_missing_value = "always",
@@ -78,21 +79,21 @@ also set `--owned-only=false` as default value of `--owned-only`"
         action = ArgAction::Set,
         num_args = 0..=1,
         require_equals = true,
-        default_value = "true",
+        default_value_t = true,
         default_value_if("remove_root", "true", "false")
     )]
     pub owned_only: bool,
     #[arg(
         long,
         value_name = "PATH",
-        default_value = "/nix/var/nix/profiles",
+        default_values_os_t = [PathBuf::from("/nix/var/nix/profiles")],
         help = "directories to ignore"
     )]
     pub ignore_directories: Vec<PathBuf>,
     #[arg(
         long,
         value_name = "PATH",
-        default_value = ".local/state/nix/profiles",
+        default_values_os_t = [PathBuf::from(".local/state/nix/profiles")],
         help = "directories (relative to user's home) to ignore"
     )]
     pub ignore_directories_in_home: Vec<PathBuf>,
@@ -107,7 +108,7 @@ validation only happens when `--remove-root` is not specified"
         long,
         value_name = "PATH",
         help = "store path for validation",
-        default_value = "/nix/store"
+        default_value_os_t = PathBuf::from("/nix/store")
     )]
     pub store: PathBuf,
     #[arg(long, help = "do not output statistic data")]
@@ -126,7 +127,7 @@ when FILE is -, write to standard output"
         long,
         value_name = "DELIMITER",
         help = "output delimiter",
-        default_value = "\n",
+        default_value_os_t = OsString::from("\n"),
         default_value_if("null_output_delimiter", "true", "\0")
     )]
     pub output_delimiter: OsString,
@@ -148,4 +149,14 @@ pub enum Interactive {
     Never,
     Once,
     Always,
+}
+
+impl fmt::Display for Interactive {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Interactive::Never => write!(f, "never"),
+            Interactive::Once => write!(f, "once"),
+            Interactive::Always => write!(f, "always"),
+        }
+    }
 }
