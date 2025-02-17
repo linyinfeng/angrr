@@ -199,7 +199,10 @@ impl RunContext {
                 log::debug!("target of {link_path:?} not found, skip");
                 return Ok(None);
             }
-            e => e.with_context(|| format!("failed to read metadata of file {target:?}"))?,
+            e => {
+                log::warn!("ignore {target:?}, can not read metadata: {e:?}");
+                return Ok(None);
+            },
         };
         if self.ignored(&target) || self.ignored_in_home(&target, &metadata) {
             log::debug!("ignore {target:?}");
