@@ -202,7 +202,7 @@ impl RunContext {
             e => {
                 log::warn!("ignore {target:?}, can not read metadata: {e:?}");
                 return Ok(None);
-            },
+            }
         };
         if self.ignored(&target) || self.ignored_in_home(&target, &metadata) {
             log::debug!("ignore {target:?}");
