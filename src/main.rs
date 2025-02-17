@@ -20,6 +20,7 @@ use console::Term;
 use dialoguer::Confirm;
 use humantime::format_duration;
 use options::{Interactive, Options, RunOptions};
+use users::{get_user_by_uid, os::unix::UserExt};
 
 fn main() -> anyhow::Result<()> {
     let carte_name = crate_name!();
@@ -200,6 +201,10 @@ impl RunContext {
             }
             e => e.with_context(|| format!("failed to read metadata of file {target:?}"))?,
         };
+        if self.ignored(&target) || self.ignored_in_home(&target, &metadata) {
+            log::debug!("ignore {target:?}");
+            return Ok(None);
+        }
         if self.options.owned_only {
             let file_uid = metadata.uid();
             if file_uid != self.uid {
@@ -287,6 +292,33 @@ impl RunContext {
             }
             None => Ok(Box::new(sink())),
         }
+    }
+
+    fn ignored<P: AsRef<Path>>(&self, target: P) -> bool {
+        let p = target.as_ref();
+        for prefix in &self.options.ignore_directories {
+            if p.starts_with(prefix) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    fn ignored_in_home<P: AsRef<Path>>(&self, target: P, metadata: &fs::Metadata) -> bool {
+        let p = target.as_ref();
+        let uid = metadata.uid();
+        let user = match get_user_by_uid(uid) {
+            None => return false,
+            Some(user) => user,
+        };
+        let home = user.home_dir();
+        for prefix in &self.options.ignore_directories_in_home {
+            let full_prefix = home.join(prefix);
+            if p.starts_with(full_prefix) {
+                return true;
+            }
+        }
+        return false;
     }
 }
 

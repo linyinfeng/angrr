@@ -84,6 +84,20 @@ also set `--owned-only=false` as default value of `--owned-only`"
     pub owned_only: bool,
     #[arg(
         long,
+        value_name = "PATH",
+        default_value = "/nix/var/nix/profiles",
+        help = "directories to ignore"
+    )]
+    pub ignore_directories: Vec<PathBuf>,
+    #[arg(
+        long,
+        value_name = "PATH",
+        default_value = ".local/state/nix/profiles",
+        help = "directories (relative to user's home) to ignore"
+    )]
+    pub ignore_directories_in_home: Vec<PathBuf>,
+    #[arg(
+        long,
         help = "\
 force delete targets of GC roots that do not point to store
 validation only happens when `--remove-root` is not specified"
