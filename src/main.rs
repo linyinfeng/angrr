@@ -23,17 +23,42 @@ use options::{Interactive, Options, RunOptions};
 use users::{get_user_by_uid, os::unix::UserExt};
 
 fn main() -> anyhow::Result<()> {
-    let carte_name = crate_name!();
-
-    let mut builder = pretty_env_logger::formatted_builder();
-    let filters = match std::env::var("RUST_LOG") {
-        Ok(f) => f,
-        Err(_) => format!("{carte_name}=info"),
-    };
-    builder.parse_filters(&filters);
-    builder.try_init()?;
+    let crate_name = crate_name!();
 
     let options = Options::parse();
+
+    let mut logger_builder = pretty_env_logger::formatted_builder();
+
+    // default logger configuration
+    let default_log_level = log::LevelFilter::Info;
+    logger_builder.filter_module(crate_name, default_log_level);
+    // overrides
+    if let Ok(filter) = std::env::var("RUST_LOG") {
+        logger_builder.parse_filters(&filter);
+    };
+    if options.verbose != 0 {
+        let mut iter = log::LevelFilter::iter().fuse();
+        // find the default log level
+        iter.find(|level| *level == default_log_level);
+        for _ in 0..(options.verbose - 1) {
+            iter.next();
+        }
+        // since our iter is a Fuse, it must return None if we already reach the max level
+        let level = match iter.next() {
+            Some(l) => l,
+            None => log::LevelFilter::max(),
+        };
+        logger_builder.filter_module(crate_name, level);
+    }
+    if let Some(level) = options.log_level {
+        logger_builder.filter_module(crate_name, level);
+    }
+    let builder_debug_info = format!("{:?}", logger_builder);
+    logger_builder.try_init()?;
+    log::debug!(
+        "logger initialized with configuration: {}",
+        builder_debug_info
+    );
 
     match options.command {
         options::Commands::Run(run_opts) => {
@@ -43,7 +68,7 @@ fn main() -> anyhow::Result<()> {
             context.finish()
         }
         options::Commands::Completion(gen_options) => {
-            generate_shell_completions(gen_options, carte_name)
+            generate_shell_completions(gen_options, crate_name)
         }
     }
 }

@@ -23,6 +23,15 @@ const HELP_TEMPLATE: &str = "\
 pub struct Options {
     #[command(subcommand)]
     pub command: Commands,
+    #[arg(global = true, short, long, action = clap::ArgAction::Count, help = "increase log level (will be overridden by --log-level)")]
+    pub verbose: u8,
+    #[arg(
+        global = true,
+        long,
+        help = "set log level (off, error, warn, info, debug, trace)",
+        value_name = "LEVEL"
+    )]
+    pub log_level: Option<log::LevelFilter>,
 }
 
 #[derive(Clone, Debug, Subcommand)]
@@ -133,7 +142,7 @@ when FILE is -, write to standard output"
     pub output_delimiter: OsString,
     #[arg(long, help = "use \"\\0\" as the output delimiter")]
     pub null_output_delimiter: bool,
-    #[arg(long)]
+    #[arg(long, help = "do not remove file")]
     pub dry_run: bool,
 }
 
