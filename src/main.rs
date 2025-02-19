@@ -20,7 +20,7 @@ use console::Term;
 use dialoguer::Confirm;
 use humantime::format_duration;
 use options::{Interactive, Options, RunOptions};
-use users::{get_user_by_uid, os::unix::UserExt};
+use uzers::{get_user_by_uid, os::unix::UserExt};
 
 fn main() -> anyhow::Result<()> {
     let crate_name = crate_name!();
