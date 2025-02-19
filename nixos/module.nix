@@ -51,6 +51,22 @@ in
         '';
         apply = b: if b then "true" else "false";
       };
+      logLevel = lib.mkOption {
+        type =
+          with lib.types;
+          enum [
+            "off"
+            "error"
+            "warn"
+            "info"
+            "debug"
+            "trace"
+          ];
+        default = "info";
+        description = ''
+          Set the log level of angrr.
+        '';
+      };
       extraArgs = lib.mkOption {
         type = with lib.types; listOf str;
         default = [ ];
@@ -77,6 +93,7 @@ in
           description = "Auto Nix GC Roots Retention";
           script = ''
             ${cfg.package}/bin/angrr run \
+              --log-level "${cfg.logLevel}" \
               --period "${cfg.period}" \
               ${lib.optionalString cfg.removeRoot "--remove-root"} \
               --owned-only="${cfg.ownedOnly}" \
