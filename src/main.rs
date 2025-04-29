@@ -4,18 +4,18 @@ use std::{
     ffi::OsStr,
     fmt::Debug,
     fs::{self, File},
-    io::{self, sink, stdout, BufWriter, Write},
+    io::{self, BufWriter, Write, sink, stdout},
     os::unix::{ffi::OsStrExt, fs::MetadataExt},
     path::{Path, PathBuf},
     sync::{
-        atomic::{AtomicUsize, Ordering},
         Mutex,
+        atomic::{AtomicUsize, Ordering},
     },
     time::{Duration, SystemTime},
 };
 
 use anyhow::Context;
-use clap::{crate_name, CommandFactory, Parser};
+use clap::{CommandFactory, Parser, crate_name};
 use console::Term;
 use dialoguer::Confirm;
 use humantime::format_duration;
@@ -236,8 +236,10 @@ impl RunContext {
         if self.options.owned_only {
             let file_uid = metadata.uid();
             if file_uid != self.uid {
-                log::debug!("ignore {target:?} due to uid mismatch: file uid == {file_uid}, process uid == {process_uid}",
-                  process_uid = self.uid);
+                log::debug!(
+                    "ignore {target:?} due to uid mismatch: file uid == {file_uid}, process uid == {process_uid}",
+                    process_uid = self.uid
+                );
                 return Ok(None);
             }
         }
