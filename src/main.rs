@@ -16,8 +16,7 @@ use std::{
 
 use anyhow::Context;
 use clap::{CommandFactory, Parser, crate_name};
-use console::Term;
-use dialoguer::Confirm;
+use dialoguer::{Confirm, console::Term};
 use humantime::format_duration;
 use options::{Interactive, Options, RunOptions};
 use uzers::{get_user_by_uid, os::unix::UserExt};
