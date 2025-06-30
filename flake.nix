@@ -34,6 +34,7 @@
         ];
         flake = {
           nixosModules.angrr = ./nixos/module.nix;
+          darwinModules.angrr = ./darwin/module.nix;
         };
         perSystem =
           {
