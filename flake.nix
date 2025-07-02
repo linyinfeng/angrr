@@ -27,6 +27,8 @@
         systems = [
           "x86_64-linux"
           "aarch64-linux"
+          "x86_64-darwin"
+          "aarch64-darwin"
         ];
         imports = [
           inputs.flake-parts.flakeModules.easyOverlay
@@ -34,6 +36,7 @@
         ];
         flake = {
           nixosModules.angrr = ./nixos/module.nix;
+          darwinModules.angrr = ./darwin/module.nix;
         };
         perSystem =
           {
