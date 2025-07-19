@@ -52,12 +52,9 @@ fn main() -> anyhow::Result<()> {
     if let Some(level) = options.log_level {
         logger_builder.filter_module(crate_name, level);
     }
-    let builder_debug_info = format!("{:?}", logger_builder);
+    let builder_debug_info = format!("{logger_builder:?}");
     logger_builder.try_init()?;
-    log::debug!(
-        "logger initialized with configuration: {}",
-        builder_debug_info
-    );
+    log::debug!("logger initialized with configuration: {builder_debug_info}");
 
     match options.command {
         options::Commands::Run(run_opts) => {
@@ -406,7 +403,7 @@ impl ToRemove<'_> {
         self.notify(Action::Remove, false)?;
         if !self.options().dry_run {
             fs::remove_file(path_to_remove)
-                .with_context(|| format!("failed to remove {:?}", path_to_remove))?;
+                .with_context(|| format!("failed to remove {path_to_remove:?}"))?;
         }
         self.context.statistic.removed.increase();
         let mut out = self.context.output.lock().unwrap();
