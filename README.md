@@ -2,7 +2,7 @@
 
 If you are a heavy user of [nix-direnv](https://github.com/nix-community/nix-direnv), you might find that auto GC roots of projects not accessed for a long time won't be automatically removed, leading to many old store paths can not being garbage collected.
 
-This tool simply deletes auto GC roots based on the modified time of their symbolic link target.
+This tool simply deletes auto GC roots based on the **modification time(last modified date)** of their symbolic link target.
 
 ## Usage
 
