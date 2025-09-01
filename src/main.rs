@@ -254,16 +254,20 @@ impl RunContext {
         Ok(Some(Reason { target, elapsed }))
     }
 
-    fn validate<P: AsRef<Path>>(&self, target: P) -> anyhow::Result<bool> {
+    fn validate<P: AsRef<Path>>(&self, target: P) -> bool {
         let target = target.as_ref();
-        let final_target = fs::canonicalize(target)
-            .with_context(|| format!("failed to canonicalize {target:?} for validation"))?;
-        Ok(final_target.starts_with(&self.options.store))
+        match fs::canonicalize(target) {
+            Ok(path) => path.starts_with(&self.options.store),
+            Err(e) => {
+                log::warn!("failed to canonicalize {target:?} for validation: {e}");
+                false
+            }
+        }
     }
 
     fn validate_and_prompt<P: AsRef<Path>>(&self, target: P) -> anyhow::Result<bool> {
         let target = target.as_ref();
-        if !self.validate(target)? {
+        if !self.validate(target) {
             self.statistic.invalid.increase();
             let mut term = self.term.clone();
             let fail_message_style = if self.options.force {
