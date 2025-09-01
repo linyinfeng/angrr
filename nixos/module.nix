@@ -8,6 +8,8 @@ let
 in
 {
   imports = [ ../shared/options.nix ];
+  # disable upstream module
+  disabledModules = [ "services/misc/angrr.nix" ];
   options = {
     services.angrr = {
       enableNixGcIntegration = lib.mkOption {
