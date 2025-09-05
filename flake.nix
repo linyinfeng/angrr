@@ -88,6 +88,13 @@
               clippy = craneLib.cargoClippy (
                 commonArgs // { cargoClippyExtraArgs = "--all-targets -- --deny warnings"; }
               );
+              module = pkgs.testers.runNixOSTest {
+                imports = [ "${inputs.nixpkgs}/nixos/tests/angrr.nix" ];
+                nodes.machine = {
+                  imports = [ self.nixosModules.angrr ];
+                };
+                node.pkgs = lib.mkForce (pkgs.extend (self.overlays.default)).pkgsLinux;
+              };
             };
             treefmt = {
               projectRootFile = "flake.nix";
