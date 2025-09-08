@@ -18,8 +18,17 @@ use anyhow::Context;
 use clap::{CommandFactory, Parser, crate_name};
 use dialoguer::{Confirm, console::Term};
 use humantime::format_duration;
+use nix::{
+    fcntl::AT_FDCWD,
+    sys::{
+        stat::{UtimensatFlags, utimensat},
+        time::TimeSpec,
+    },
+};
 use options::{Interactive, Options, RunOptions};
 use uzers::{get_user_by_uid, os::unix::UserExt};
+
+use crate::options::{CommonOptions, TouchOptions};
 
 fn main() -> anyhow::Result<()> {
     let crate_name = crate_name!();
@@ -35,11 +44,11 @@ fn main() -> anyhow::Result<()> {
     if let Ok(filter) = std::env::var("RUST_LOG") {
         logger_builder.parse_filters(&filter);
     };
-    if options.verbose != 0 {
+    if options.common.verbose != 0 {
         let mut iter = log::LevelFilter::iter().fuse();
         // find the default log level
         iter.find(|level| *level == default_log_level);
-        for _ in 0..(options.verbose - 1) {
+        for _ in 0..(options.common.verbose - 1) {
             iter.next();
         }
         // since our iter is a Fuse, it must return None if we already reach the max level
@@ -49,7 +58,7 @@ fn main() -> anyhow::Result<()> {
         };
         logger_builder.filter_module(crate_name, level);
     }
-    if let Some(level) = options.log_level {
+    if let Some(level) = options.common.log_level {
         logger_builder.filter_module(crate_name, level);
     }
     let builder_debug_info = format!("{logger_builder:?}");
@@ -58,10 +67,15 @@ fn main() -> anyhow::Result<()> {
 
     match options.command {
         options::Commands::Run(run_opts) => {
-            let context = RunContext::new(run_opts)?;
+            let context = RunContext::new(options.common, run_opts)?;
             log::trace!("context = {context:#?}");
             context.run()?;
             context.finish()
+        }
+        options::Commands::Touch(touch_opts) => {
+            let context = TouchContext::new(options.common, touch_opts);
+            log::trace!("context = {context:#?}");
+            context.touch()
         }
         options::Commands::Completion(gen_options) => {
             generate_shell_completions(gen_options, crate_name)
@@ -71,6 +85,7 @@ fn main() -> anyhow::Result<()> {
 
 #[derive(Debug)]
 struct RunContext {
+    common_options: CommonOptions,
     options: RunOptions,
     uid: u32,
     now: SystemTime,
@@ -119,7 +134,7 @@ impl<T> OutputWriter for T where T: Write + Debug {}
 struct Counter(AtomicUsize);
 
 impl RunContext {
-    fn new(options: RunOptions) -> anyhow::Result<Self> {
+    fn new(common_options: CommonOptions, options: RunOptions) -> anyhow::Result<Self> {
         let uid = uzers::get_current_uid();
         let now = SystemTime::now();
         let term = Term::stderr();
@@ -129,6 +144,7 @@ impl RunContext {
         });
         let statistic = Default::default();
         let context = Self {
+            common_options,
             options,
             uid,
             now,
@@ -215,8 +231,8 @@ impl RunContext {
                 log::debug!("target of {link_path:?} not found, skip");
                 return Ok(None);
             }
-            e => {
-                log::warn!("ignore {target:?}, can not read metadata: {e:?}");
+            Err(e) => {
+                log::warn!("ignore {target:?}, can not read metadata: {e}");
                 return Ok(None);
             }
         };
@@ -249,20 +265,9 @@ impl RunContext {
         Ok(Some(Reason { target, elapsed }))
     }
 
-    fn validate<P: AsRef<Path>>(&self, target: P) -> bool {
-        let target = target.as_ref();
-        match fs::canonicalize(target) {
-            Ok(path) => path.starts_with(&self.options.store),
-            Err(e) => {
-                log::warn!("failed to canonicalize {target:?} for validation: {e}");
-                false
-            }
-        }
-    }
-
     fn validate_and_prompt<P: AsRef<Path>>(&self, target: P) -> anyhow::Result<bool> {
         let target = target.as_ref();
-        if !self.validate(target) {
+        if !validate_store_path(&self.common_options.store, target) {
             self.statistic.invalid.increase();
             let mut term = self.term.clone();
             let fail_message_style = if self.options.force {
@@ -275,7 +280,7 @@ impl RunContext {
                 "{}, target {:?} does not point into store {:?}",
                 fail_message_style.apply_to("Validation failed"),
                 term.style().underlined().apply_to(&target),
-                self.options.store
+                self.common_options.store
             )?;
             if self.options.force {
                 Ok(true)
@@ -405,6 +410,18 @@ impl RunContext {
     }
 }
 
+fn validate_store_path<P1: AsRef<Path>, P2: AsRef<Path>>(store: P1, target: P2) -> bool {
+    let store = store.as_ref();
+    let target = target.as_ref();
+    match fs::canonicalize(target) {
+        Ok(path) => path.starts_with(store),
+        Err(e) => {
+            log::warn!("failed to canonicalize {target:?} for validation: {e}");
+            false
+        }
+    }
+}
+
 impl Action {
     fn format_with_style(&self, term: &Term) -> String {
         match self {
@@ -487,6 +504,95 @@ fn add_indent(text: &str, indent: usize) -> String {
         .map(|l| format!("{:indent$}{}", "", l))
         .collect();
     indented_lines.join("\n")
+}
+
+#[derive(Debug)]
+struct TouchContext {
+    common_options: CommonOptions,
+    options: TouchOptions,
+    term: Term,
+}
+
+impl TouchContext {
+    fn new(common_options: CommonOptions, options: TouchOptions) -> Self {
+        let term = Term::stderr();
+        Self {
+            common_options,
+            options,
+            term,
+        }
+    }
+
+    fn touch(&self) -> anyhow::Result<()> {
+        self.touch_path(&self.options.path)
+    }
+
+    fn touch_path<P: AsRef<Path>>(&self, path: P) -> anyhow::Result<()> {
+        // though this function returns Result<()>, it currently never fail
+        let path = path.as_ref();
+        log::trace!("processing {path:?}");
+        let metadata = match fs::symlink_metadata(path) {
+            Ok(m) => m,
+            Err(e) => {
+                log::warn!("ignore {path:?}, can not read metadata: {e}");
+                return Ok(());
+            }
+        };
+        if metadata.is_symlink() {
+            let target = match fs::read_link(path) {
+                Ok(p) => p,
+                Err(e) => {
+                    log::warn!("ignore {path:?}, failed to read symbolic link: {e}");
+                    return Ok(());
+                }
+            };
+            if validate_store_path(&self.common_options.store, target) {
+                // touch
+                if !self.options.silent {
+                    println!(
+                        "{} {path:?}",
+                        self.term.style().green().bold().apply_to("Touch")
+                    );
+                }
+                if !self.options.dry_run {
+                    let result = utimensat(
+                        AT_FDCWD,
+                        path,
+                        &TimeSpec::UTIME_OMIT,
+                        &TimeSpec::UTIME_NOW,
+                        UtimensatFlags::NoFollowSymlink,
+                    );
+                    if let Err(e) = result {
+                        log::error!("failed to touch {path:?}: {e}");
+                    }
+                }
+            } else {
+                log::debug!("ignore {path:?}, not a link into store");
+            }
+        }
+        if metadata.is_dir() {
+            let directory = match fs::read_dir(path) {
+                Ok(d) => d,
+                Err(e) => {
+                    log::warn!("ignore {path:?}, failed to read directory {e}");
+                    return Ok(());
+                }
+            };
+            for result in directory {
+                let entry = match result {
+                    Ok(e) => e,
+                    Err(e) => {
+                        log::warn!(
+                            "ignore a directory entry in {path:?}, failed to read the directory entry: {e}"
+                        );
+                        return Ok(());
+                    }
+                };
+                self.touch_path(entry.path())?;
+            }
+        }
+        Ok(())
+    }
 }
 
 fn generate_shell_completions(
