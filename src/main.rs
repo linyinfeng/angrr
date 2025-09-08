@@ -79,6 +79,12 @@ struct RunContext {
     statistic: Statistics,
 }
 
+#[derive(Debug)]
+struct Item {
+    link_path: PathBuf,
+    reason: Reason,
+}
+
 #[derive(Debug, Clone, Copy)]
 enum Action {
     Remove,
@@ -90,13 +96,6 @@ enum Action {
 struct Reason {
     target: PathBuf,
     elapsed: Duration,
-}
-
-#[derive(Debug)]
-struct ToRemove<'c> {
-    context: &'c RunContext,
-    link_path: PathBuf,
-    reason: Reason,
 }
 
 #[derive(Debug, Default)]
@@ -156,27 +155,23 @@ impl RunContext {
                 match self.check(&link_path)? {
                     Some(reason) => {
                         self.statistic.candidate.increase();
-                        let to_remove = ToRemove {
-                            context: self,
-                            link_path,
-                            reason,
-                        };
+                        let item = Item { link_path, reason };
                         match self.options.interactive {
                             Interactive::Always => {
-                                to_remove.notify(Action::AboutToRemove, true)?;
+                                self.notify(&item, Action::AboutToRemove, true)?;
                                 let yes = self.prompt()?;
                                 if yes {
-                                    to_remove.remove()?;
+                                    self.remove(&item)?;
                                 } else {
-                                    to_remove.notify(Action::Ignored, true)?;
+                                    self.notify(&item, Action::Ignored, true)?;
                                 }
                             }
                             Interactive::Once => {
-                                to_remove.notify(Action::AboutToRemove, true)?;
-                                waiting.push(to_remove);
+                                self.notify(&item, Action::AboutToRemove, true)?;
+                                waiting.push(item);
                             }
                             Interactive::Never => {
-                                to_remove.remove()?;
+                                self.remove(&item)?;
                             }
                         }
                     }
@@ -186,8 +181,8 @@ impl RunContext {
         }
 
         if !waiting.is_empty() && self.prompt()? {
-            for to_remove in &waiting {
-                to_remove.remove()?;
+            for item in &waiting {
+                self.remove(item)?;
             }
         }
 
@@ -304,10 +299,68 @@ impl RunContext {
             .context("failed to prompt")
     }
 
+    fn notify(&self, item: &Item, action: Action, with_reason: bool) -> anyhow::Result<()> {
+        let mut term = &self.term;
+        let reason_indent = 2;
+        if self.options.remove_root {
+            // remove link
+            writeln!(
+                term,
+                "{} {:?}",
+                action.format_with_style(term),
+                item.link_path
+            )?;
+            if with_reason {
+                term.write_line(&add_indent(
+                    &item.reason.format_with_style(term),
+                    reason_indent,
+                ))?;
+            }
+        } else {
+            // remove target
+            writeln!(
+                term,
+                "{} {:?}",
+                action.format_with_style(term),
+                item.reason.target
+            )?;
+            if with_reason {
+                term.write_line(&add_indent(
+                    &item.reason.format_with_style_no_target(term),
+                    reason_indent,
+                ))?;
+            }
+        }
+        Ok(())
+    }
+
+    fn remove(&self, item: &Item) -> anyhow::Result<()> {
+        let path_to_remove = if self.options.remove_root {
+            &item.link_path
+        } else {
+            // validate before remove target
+            let target = &item.reason.target;
+            if !self.validate_and_prompt(target)? {
+                self.notify(item, Action::Ignored, false)?;
+                return Ok(());
+            }
+            target
+        };
+        self.notify(item, Action::Remove, false)?;
+        if !self.options.dry_run {
+            fs::remove_file(path_to_remove)
+                .with_context(|| format!("failed to remove {path_to_remove:?}"))?;
+        }
+        self.statistic.removed.increase();
+        let mut out = self.output.lock().unwrap();
+        out.output(path_to_remove, &self.options.output_delimiter)?;
+        Ok(())
+    }
+
     fn output_writer(options: &RunOptions) -> anyhow::Result<Box<dyn OutputWriter>> {
         match &options.output {
             Some(path) => {
-                let mut writer: Box<dyn OutputWriter> = if *path == PathBuf::from("-") {
+                let mut writer: Box<dyn OutputWriter> = if path == &PathBuf::from("-") {
                     Box::new(stdout())
                 } else {
                     Box::new(
@@ -349,70 +402,6 @@ impl RunContext {
             }
         }
         false
-    }
-}
-
-impl ToRemove<'_> {
-    fn options(&self) -> &RunOptions {
-        &self.context.options
-    }
-
-    fn notify(&self, action: Action, with_reason: bool) -> anyhow::Result<()> {
-        let mut term = self.context.term.clone();
-        let reason_indent = 2;
-        if self.options().remove_root {
-            // remove link
-            writeln!(
-                term,
-                "{} {:?}",
-                action.format_with_style(&term),
-                self.link_path
-            )?;
-            if with_reason {
-                term.write_line(&add_indent(
-                    &self.reason.format_with_style(&term),
-                    reason_indent,
-                ))?;
-            }
-        } else {
-            // remove target
-            writeln!(
-                term,
-                "{} {:?}",
-                action.format_with_style(&term),
-                self.reason.target
-            )?;
-            if with_reason {
-                term.write_line(&add_indent(
-                    &self.reason.format_with_style_no_target(&term),
-                    reason_indent,
-                ))?;
-            }
-        }
-        Ok(())
-    }
-
-    fn remove(&self) -> anyhow::Result<()> {
-        let path_to_remove = if self.options().remove_root {
-            &self.link_path
-        } else {
-            // validate before remove target
-            let target = &self.reason.target;
-            if !self.context.validate_and_prompt(target)? {
-                self.notify(Action::Ignored, false)?;
-                return Ok(());
-            }
-            target
-        };
-        self.notify(Action::Remove, false)?;
-        if !self.options().dry_run {
-            fs::remove_file(path_to_remove)
-                .with_context(|| format!("failed to remove {path_to_remove:?}"))?;
-        }
-        self.context.statistic.removed.increase();
-        let mut out = self.context.output.lock().unwrap();
-        out.output(path_to_remove, &self.options().output_delimiter)?;
-        Ok(())
     }
 }
 
