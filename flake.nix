@@ -8,8 +8,6 @@
     treefmt-nix.url = "github:numtide/treefmt-nix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
 
-    crane.url = "github:ipetkov/crane";
-
     flake-compat.url = "github:edolstra/flake-compat";
     flake-compat.flake = false;
   };
@@ -46,48 +44,32 @@
             system,
             ...
           }:
-          let
-            craneLib = inputs.crane.mkLib pkgs;
-            src = craneLib.cleanCargoSource (craneLib.path ./.);
-            bareCommonArgs = {
-              inherit src;
-              nativeBuildInputs = with pkgs; [ installShellFiles ];
-              buildInputs = [ ];
-            };
-            cargoArtifacts = craneLib.buildDepsOnly bareCommonArgs;
-            commonArgs = bareCommonArgs // {
-              inherit cargoArtifacts;
-            };
-          in
           {
             packages = {
-              angrr = craneLib.buildPackage (
-                commonArgs
-                // {
-                  postInstall = ''
-                    installShellCompletion --cmd angrr \
-                      --bash <($out/bin/angrr completion bash) \
-                      --fish <($out/bin/angrr completion fish) \
-                      --zsh  <($out/bin/angrr completion zsh)
-                  '';
-                }
-              );
+              angrr = pkgs.angrr.overrideAttrs (old: {
+                src = ./.;
+                cargoDeps = pkgs.rustPlatform.importCargoLock { lockFile = ./Cargo.lock; };
+                nativeCheckInputs = (old.nativeCheckInputs or [ ]) ++ [ pkgs.clippy ];
+                postCheck = (old.postCheck or "") + ''
+                  cargo clippy --all-targets -- --deny warnings
+                '';
+              });
               default = config.packages.angrr;
             };
             overlayAttrs.angrr = config.packages.angrr;
             checks = {
               inherit (self'.packages) angrr;
-              doc = craneLib.cargoDoc commonArgs;
-              fmt = craneLib.cargoFmt { inherit src; };
-              nextest = craneLib.cargoNextest (
-                commonArgs
-                // {
-                  cargoNextestExtraArgs = lib.escapeShellArgs [ "--no-tests=warn" ];
-                }
-              );
-              clippy = craneLib.cargoClippy (
-                commonArgs // { cargoClippyExtraArgs = "--all-targets -- --deny warnings"; }
-              );
+              module = pkgs.testers.runNixOSTest {
+                imports = [ "${inputs.nixpkgs}/nixos/tests/angrr.nix" ];
+                nodes.machine = {
+                  imports = [ self.nixosModules.angrr ];
+                };
+                node.pkgs = lib.mkForce (pkgs.extend (self.overlays.default)).pkgsLinux;
+              };
+              upstreamModule = pkgs.testers.runNixOSTest {
+                imports = [ "${inputs.nixpkgs}/nixos/tests/angrr.nix" ];
+                node.pkgs = lib.mkForce (pkgs.extend (self.overlays.default)).pkgsLinux;
+              };
             };
             treefmt = {
               projectRootFile = "flake.nix";
@@ -99,7 +81,7 @@
               };
             };
             devShells.default = pkgs.mkShell {
-              inputsFrom = lib.attrValues self'.checks;
+              inputsFrom = [ self'.packages.angrr ];
               packages = with pkgs; [
                 rustup
                 rust-analyzer
