@@ -23,6 +23,12 @@ const HELP_TEMPLATE: &str = "\
 pub struct Options {
     #[command(subcommand)]
     pub command: Commands,
+    #[command(flatten)]
+    pub common: CommonOptions,
+}
+
+#[derive(Clone, Debug, Parser)]
+pub struct CommonOptions {
     #[arg(global = true, short, long, action = clap::ArgAction::Count, help = "increase log level (will be overridden by --log-level)")]
     pub verbose: u8,
     #[arg(
@@ -32,11 +38,19 @@ pub struct Options {
         value_name = "LEVEL"
     )]
     pub log_level: Option<log::LevelFilter>,
+    #[arg(
+        long,
+        value_name = "PATH",
+        help = "store path for validation",
+        default_value_os_t = PathBuf::from("/nix/store")
+    )]
+    pub store: PathBuf,
 }
 
 #[derive(Clone, Debug, Subcommand)]
 pub enum Commands {
     Run(RunOptions),
+    Touch(TouchOptions),
     Completion(CompletionOptions),
 }
 
@@ -113,13 +127,6 @@ force delete targets of GC roots that do not point to store
 validation only happens when `--remove-root` is not specified"
     )]
     pub force: bool,
-    #[arg(
-        long,
-        value_name = "PATH",
-        help = "store path for validation",
-        default_value_os_t = PathBuf::from("/nix/store")
-    )]
-    pub store: PathBuf,
     #[arg(long, help = "do not output statistic data")]
     pub no_statistic: bool,
     #[arg(
@@ -143,6 +150,20 @@ when FILE is -, write to standard output"
     #[arg(long, help = "use \"\\0\" as the output delimiter")]
     pub null_output_delimiter: bool,
     #[arg(long, help = "do not remove file")]
+    pub dry_run: bool,
+}
+
+#[derive(Clone, Debug, Parser)]
+#[command(about = "Touch GC roots")]
+#[command(arg_required_else_help = true)]
+pub struct TouchOptions {
+    #[arg(value_name = "PATH")]
+    pub path: PathBuf,
+    #[arg(short, long)]
+    pub no_recursive: bool,
+    #[arg(short, long)]
+    pub silent: bool,
+    #[arg(long, help = "do not actually touch file")]
     pub dry_run: bool,
 }
 

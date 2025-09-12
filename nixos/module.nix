@@ -57,6 +57,7 @@ in
             Type = "oneshot";
           };
         };
+        environment.systemPackages = [ cfg.package ];
       }
 
       (lib.mkIf cfg.timer.enable {

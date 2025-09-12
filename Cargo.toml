@@ -15,3 +15,4 @@ anyhow = "*"
 humantime = "*"
 dialoguer = "*"
 uzers = "*"
+nix = { version = "*", features = ["fs"] }
