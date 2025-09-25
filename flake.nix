@@ -47,6 +47,7 @@
           {
             packages = {
               angrr = pkgs.angrr.overrideAttrs (old: {
+                version = "0.1.3";
                 src = ./.;
                 cargoDeps = pkgs.rustPlatform.importCargoLock { lockFile = ./Cargo.lock; };
                 nativeCheckInputs = (old.nativeCheckInputs or [ ]) ++ [ pkgs.clippy ];
@@ -54,35 +55,8 @@
                   cargo clippy --all-targets -- --deny warnings
                 '';
               });
-              # TODO upstream
-              angrr-direnv = pkgs.resholve.mkDerivation {
-                pname = "angrr-direnv";
-                version = "unstable";
-                src = ./direnv;
-                # nix-direnv like installation
-                installPhase = ''
-                  runHook preInstall
-                  install -m400 -D angrr.sh $out/share/direnv/lib/angrr.sh
-                  runHook postInstall
-                '';
-                solutions = {
-                  default = {
-                    scripts = [ "share/direnv/lib/angrr.sh" ];
-                    interpreter = "none";
-                    inputs = [ ]; # use external angrr from PATH
-                    fake = {
-                      function = [
-                        "has"
-                        "direnv_layout_dir"
-                        "log_error"
-                        "log_status"
-                      ];
-                      external = [
-                        "angrr"
-                      ];
-                    };
-                  };
-                };
+              angrr-direnv = pkgs.angrr-direnv.override {
+                inherit (config.packages) angrr;
               };
               default = config.packages.angrr;
             };
