@@ -55,3 +55,34 @@ and the retention period is 2 weeks,
 the `--owned-only=false` option will be passed by default so that the service manages auto GC roots for all users.
 
 Read [nixos/module.nix](./nixos/module.nix) for more information.
+
+## Direnv integration
+
+Some direnv environments upgrade very rarely. GC roots of such environments will be deleted and recreated frequently even when you are actively using them. Since the tool deletes auto GC roots based on the modification time of their symbolic link target.
+
+To solve this issue, an `angrr touch` command is provided. The command recursively touches every link to store in the given directory.
+
+```console
+$  angrr touch .direnv
+Touch ".direnv/flake-profile-a5d5b61aa8a61b7d9d765e1daf971a9a578f1cfa"
+Touch ".direnv/flake-inputs/8n2y13ilw5vdc058bxsd0xn7bzjpp6m3-source"
+Touch ".direnv/flake-inputs/b0my5vy8pzfzjqrr3g58j0w6md9jf3ch-source"
+Touch ".direnv/flake-inputs/q67xj3l4kdqqkkpr8ajpcqj7vybrqkqg-source"
+Touch ".direnv/flake-inputs/8ly89qdcjh6pb5xamvq4vrzqnifwshn3-source"
+Touch ".direnv/flake-inputs/xaccbji1vx054s1r52939z11yfalkjbj-source"
+Touch ".direnv/flake-inputs/niayq5b53f1zcz63j2xghghjbya12hpf-source"
+```
+
+A direnv library is provided to easy integrate `angrr touch` to direnv. By default, if you are using the NixOS module of `direnv` with `services.angrr.enable = true`, `angrr touch` will automatically be run for the direnv layout directory before loading `.enrvc`.
+
+```console
+$ direnv allow
+direnv: using angrr
+direnv: angrr: touch GC roots /home/yinfeng/Source/angrr/.direnv
+direnv: loading ~/Source/angrr/.envrc
+direnv: using flake
+direnv: nix-direnv: Renewed cache
+...
+```
+
+This behavior can be turned off by settings `programs.direnv.angrr.autoUse = false`, you can still manually add `use angrr` to explicitly trigger `angrr touch`. If you want to disable direnv integration completely, set `programs.direnv.angrr.enable = false`.
