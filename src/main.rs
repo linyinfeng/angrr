@@ -548,7 +548,9 @@ impl TouchContext {
             };
             if validate_store_path(&self.common_options.store, target) {
                 // touch
-                if !self.options.silent {
+                if self.options.silent {
+                    log::debug!("touch {path:?}");
+                } else {
                     println!(
                         "{} {path:?}",
                         self.term.style().green().bold().apply_to("Touch")
