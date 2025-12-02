@@ -54,36 +54,6 @@
                   cargo clippy --all-targets -- --deny warnings
                 '';
               });
-              # TODO upstream
-              angrr-direnv = pkgs.resholve.mkDerivation {
-                pname = "angrr-direnv";
-                version = "unstable";
-                src = ./direnv;
-                # nix-direnv like installation
-                installPhase = ''
-                  runHook preInstall
-                  install -m400 -D angrr.sh $out/share/direnv/lib/angrr.sh
-                  runHook postInstall
-                '';
-                solutions = {
-                  default = {
-                    scripts = [ "share/direnv/lib/angrr.sh" ];
-                    interpreter = "none";
-                    inputs = [ ]; # use external angrr from PATH
-                    fake = {
-                      function = [
-                        "has"
-                        "direnv_layout_dir"
-                        "log_error"
-                        "log_status"
-                      ];
-                      external = [
-                        "angrr"
-                      ];
-                    };
-                  };
-                };
-              };
               default = config.packages.angrr;
             };
             overlayAttrs = {

@@ -1,5 +1,4 @@
 {
-  pkgs,
   config,
   lib,
   ...
@@ -27,26 +26,6 @@ in
           default = "03:00";
           description = ''
             How often or when the retention policy is performed.
-          '';
-        };
-      };
-    };
-    programs.direnv = {
-      angrr = {
-        enable = lib.mkEnableOption "angrr-direnv" // {
-          default = cfg.enable;
-          defaultText = lib.literalExpression ''
-            config.services.angrr.enable
-          '';
-          example = false;
-        };
-        package = lib.mkPackageOption pkgs "angrr-direnv" { };
-        autoUse = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          example = false;
-          description = ''
-            Whether to automatically use angrr before loading .envrc
           '';
         };
       };
@@ -98,8 +77,8 @@ in
         };
       })
 
-      (lib.mkIf direnvCfg.enable {
-        environment.etc."direnv/lib/angrr.sh".source = "${direnvCfg.package}/share/direnv/lib/angrr.sh";
+      (lib.mkIf (config.programs.direnv.enable && direnvCfg.enable) {
+        environment.etc."direnv/lib/angrr.sh".source = "${cfg.package}/share/direnv/lib/angrr.sh";
         programs.direnv.direnvrcExtra = lib.mkIf direnvCfg.autoUse ''
           use angrr
         '';

@@ -1,4 +1,8 @@
-{ lib, pkgs, ... }:
+{
+  lib,
+  pkgs,
+  ...
+}:
 {
   options = {
     services.angrr = {
@@ -48,6 +52,20 @@
         default = [ ];
         description = ''
           Extra command-line arguments pass to angrr.
+        '';
+      };
+    };
+    programs.direnv.angrr = {
+      enable = lib.mkEnableOption "angrr direnv integration" // {
+        default = true;
+        example = false;
+      };
+      autoUse = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        example = false;
+        description = ''
+          Whether to automatically use angrr before loading .envrc.
         '';
       };
     };
