@@ -44,6 +44,9 @@
             system,
             ...
           }:
+          let
+            inherit (pkgs.stdenv.hostPlatform) isLinux;
+          in
           {
             packages = {
               angrr = pkgs.angrr.overrideAttrs (old: {
@@ -89,20 +92,25 @@
             overlayAttrs = {
               inherit (config.packages) angrr angrr-direnv;
             };
-            checks = {
-              inherit (self'.packages) angrr;
-              module = pkgs.testers.runNixOSTest {
-                imports = [ "${inputs.nixpkgs}/nixos/tests/angrr.nix" ];
-                nodes.machine = {
-                  imports = [ self.nixosModules.angrr ];
+            checks = lib.mkMerge [
+              # common checks
+              { inherit (self'.packages) angrr; }
+
+              # linux only
+              (lib.mkIf isLinux {
+                module = pkgs.testers.runNixOSTest {
+                  imports = [ "${inputs.nixpkgs}/nixos/tests/angrr.nix" ];
+                  nodes.machine = {
+                    imports = [ self.nixosModules.angrr ];
+                  };
+                  node.pkgs = lib.mkForce (pkgs.extend (self.overlays.default)).pkgsLinux;
                 };
-                node.pkgs = lib.mkForce (pkgs.extend (self.overlays.default)).pkgsLinux;
-              };
-              upstreamModule = pkgs.testers.runNixOSTest {
-                imports = [ "${inputs.nixpkgs}/nixos/tests/angrr.nix" ];
-                node.pkgs = lib.mkForce (pkgs.extend (self.overlays.default)).pkgsLinux;
-              };
-            };
+                upstreamModule = pkgs.testers.runNixOSTest {
+                  imports = [ "${inputs.nixpkgs}/nixos/tests/angrr.nix" ];
+                  node.pkgs = lib.mkForce (pkgs.extend (self.overlays.default)).pkgsLinux;
+                };
+              })
+            ];
             treefmt = {
               projectRootFile = "flake.nix";
               programs = {

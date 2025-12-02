@@ -1,12 +1,23 @@
 name: "Check"
 on:
   push:
+    branches:
+      - main
   pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        runner:
+          - ubuntu-latest # x86_64-linux
+          - ubuntu-24.04-arm # aarch64-linux
+          - macos-15-intel # x86_64-darwin
+          - macos-latest # aarch64-linux
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
         uses: actions/checkout@main
@@ -14,6 +25,9 @@ jobs:
         uses: cachix/install-nix-action@master
         with:
           github_access_token: "${{ secrets.GITHUB_TOKEN }}"
+          # https://github.com/cachix/install-nix-action/tree/master/?tab=readme-ov-file#how-do-i-run-nixos-tests-on-linux
+          enable_kvm: true
+          extra_nix_config: "system-features = nixos-test benchmark big-parallel kvm"
       - name: Setup cachix
         uses: cachix/cachix-action@master
         with:
