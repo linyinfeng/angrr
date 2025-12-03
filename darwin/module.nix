@@ -46,7 +46,7 @@ in
       }
 
       (lib.mkIf cfg.timer.enable {
-        launchd.daemons.nix-gc.serviceConfig.StartCalendarInterval = cfg.timer.dates;
+        launchd.daemons.angrr.serviceConfig.StartCalendarInterval = cfg.timer.dates;
       })
 
       (lib.mkIf (config.programs.direnv.enable && direnvCfg.enable) {
