@@ -50,7 +50,17 @@
           {
             packages = {
               angrr = pkgs.angrr.overrideAttrs (old: {
-                src = ./.;
+                src =
+                  with lib.fileset;
+                  toSource {
+                    root = ./.;
+                    fileset = unions [
+                      ./Cargo.toml
+                      ./Cargo.lock
+                      ./src
+                      ./direnv
+                    ];
+                  };
                 cargoDeps = pkgs.rustPlatform.importCargoLock { lockFile = ./Cargo.lock; };
                 nativeCheckInputs = (old.nativeCheckInputs or [ ]) ++ [ pkgs.clippy ];
                 postCheck = (old.postCheck or "") + ''
