@@ -263,9 +263,9 @@ impl RunContext {
             }
         };
 
-        // filter with --ignore-directories and --ignore-directories-in-home
-        if self.ignored(&target) || self.ignored_in_home(&target, &metadata) {
-            log::debug!("ignore {target:?}");
+        // filter with --ignore-prefixes and --ignore-prefixes-in-home
+        if self.ignored_by_prefix(&target) || self.ignored_by_prefix_in_home(&target, &metadata) {
+            log::debug!("ignore {target:?} by prefix");
             return Ok(None);
         }
 
@@ -437,9 +437,9 @@ impl RunContext {
         }
     }
 
-    fn ignored<P: AsRef<Path>>(&self, target: P) -> bool {
+    fn ignored_by_prefix<P: AsRef<Path>>(&self, target: P) -> bool {
         let p = target.as_ref();
-        for prefix in &self.options.ignore_directories {
+        for prefix in &self.options.ignore_prefixes {
             if p.starts_with(prefix) {
                 return true;
             }
@@ -447,7 +447,11 @@ impl RunContext {
         false
     }
 
-    fn ignored_in_home<P: AsRef<Path>>(&self, target: P, metadata: &fs::Metadata) -> bool {
+    fn ignored_by_prefix_in_home<P: AsRef<Path>>(
+        &self,
+        target: P,
+        metadata: &fs::Metadata,
+    ) -> bool {
         let p = target.as_ref();
         let uid = metadata.uid();
         let user = match get_user_by_uid(uid) {
@@ -455,7 +459,7 @@ impl RunContext {
             Some(user) => user,
         };
         let home = user.home_dir();
-        for prefix in &self.options.ignore_directories_in_home {
+        for prefix in &self.options.ignore_prefixes_in_home {
             let full_prefix = home.join(prefix);
             if p.starts_with(full_prefix) {
                 return true;

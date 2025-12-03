@@ -109,13 +109,15 @@ also set `--owned-only=false` as default value of `--owned-only`"
     pub owned_only: bool,
     #[arg(
         long,
+        visible_alias = "ignore-directories",
         value_name = "PATH",
         default_values_os_t = [PathBuf::from("/nix/var/nix/profiles")],
         help = "directories to ignore"
     )]
-    pub ignore_directories: Vec<PathBuf>,
+    pub ignore_prefixes: Vec<PathBuf>,
     #[arg(
         long,
+        visible_alias = "ignore-directories-in-home",
         value_name = "PATH",
         default_values_os_t = [
             PathBuf::from(".local/state/nix/profiles"),
@@ -124,7 +126,7 @@ also set `--owned-only=false` as default value of `--owned-only`"
         ],
         help = "directories (relative to user's home) to ignore"
     )]
-    pub ignore_directories_in_home: Vec<PathBuf>,
+    pub ignore_prefixes_in_home: Vec<PathBuf>,
     #[arg(
         long,
         value_name = "REGEX",
