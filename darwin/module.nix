@@ -5,6 +5,7 @@
 }:
 let
   cfg = config.services.angrr;
+  direnvCfg = config.programs.direnv.angrr;
 in
 {
   imports = [ ../shared/options.nix ];
@@ -40,10 +41,19 @@ in
           '';
           serviceConfig.RunAtLoad = false;
         };
+
+        environment.systemPackages = [ cfg.package ];
       }
 
       (lib.mkIf cfg.timer.enable {
-        launchd.daemons.nix-gc.serviceConfig.StartCalendarInterval = cfg.timer.dates;
+        launchd.daemons.angrr.serviceConfig.StartCalendarInterval = cfg.timer.dates;
+      })
+
+      (lib.mkIf (config.programs.direnv.enable && direnvCfg.enable) {
+        environment.etc."direnv/lib/angrr.sh".source = "${cfg.package}/share/direnv/lib/angrr.sh";
+        programs.direnv.direnvrcExtra = lib.mkIf direnvCfg.autoUse ''
+          use angrr
+        '';
       })
     ]
   );
