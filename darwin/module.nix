@@ -41,6 +41,8 @@ in
           '';
           serviceConfig.RunAtLoad = false;
         };
+
+        environment.systemPackages = [ cfg.package ];
       }
 
       (lib.mkIf cfg.timer.enable {
