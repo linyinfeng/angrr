@@ -6,6 +6,8 @@ This tool deletes auto GC roots based on the **modification time** of their symb
 
 By default, `angrr` monitors paths matching the regex `/\.direnv/|/result.*$`. Use the `--path-regex <REGEX>` option to customize this behavior.
 
+⚠️**Note**: direnv integration was added in version `0.1.2`, but the version didn’t make it into the `nixos-25.11` channel — currently it’s only available in `nixos-unstable`.
+
 ## Usage
 
 - For non-root users:
