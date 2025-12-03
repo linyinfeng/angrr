@@ -53,24 +53,7 @@
           in
           {
             packages = {
-              angrr = pkgs.angrr.overrideAttrs (old: {
-                src =
-                  with lib.fileset;
-                  toSource {
-                    root = ./.;
-                    fileset = unions [
-                      ./Cargo.toml
-                      ./Cargo.lock
-                      ./src
-                      ./direnv
-                    ];
-                  };
-                cargoDeps = pkgs.rustPlatform.importCargoLock { lockFile = ./Cargo.lock; };
-                nativeCheckInputs = (old.nativeCheckInputs or [ ]) ++ [ pkgs.clippy ];
-                postCheck = (old.postCheck or "") + ''
-                  cargo clippy --all-targets -- --deny warnings
-                '';
-              });
+              angrr = pkgs.callPackage ./package.nix { };
               default = config.packages.angrr;
             };
             overlayAttrs = {
