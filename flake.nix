@@ -8,6 +8,10 @@
     treefmt-nix.url = "github:numtide/treefmt-nix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
 
+    # only used in checks
+    nix-darwin.url = "github:nix-darwin/nix-darwin";
+    nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
+
     flake-compat.url = "github:edolstra/flake-compat";
     flake-compat.flake = false;
   };
@@ -45,7 +49,7 @@
             ...
           }:
           let
-            inherit (pkgs.stdenv.hostPlatform) isLinux;
+            inherit (pkgs.stdenv.hostPlatform) isLinux isDarwin;
           in
           {
             packages = {
@@ -67,40 +71,10 @@
                   cargo clippy --all-targets -- --deny warnings
                 '';
               });
-              # TODO upstream
-              angrr-direnv = pkgs.resholve.mkDerivation {
-                pname = "angrr-direnv";
-                version = "unstable";
-                src = ./direnv;
-                # nix-direnv like installation
-                installPhase = ''
-                  runHook preInstall
-                  install -m400 -D angrr.sh $out/share/direnv/lib/angrr.sh
-                  runHook postInstall
-                '';
-                solutions = {
-                  default = {
-                    scripts = [ "share/direnv/lib/angrr.sh" ];
-                    interpreter = "none";
-                    inputs = [ ]; # use external angrr from PATH
-                    fake = {
-                      function = [
-                        "has"
-                        "direnv_layout_dir"
-                        "log_error"
-                        "log_status"
-                      ];
-                      external = [
-                        "angrr"
-                      ];
-                    };
-                  };
-                };
-              };
               default = config.packages.angrr;
             };
             overlayAttrs = {
-              inherit (config.packages) angrr angrr-direnv;
+              inherit (config.packages) angrr;
             };
             checks = lib.mkMerge [
               # common checks
@@ -113,16 +87,27 @@
                   nodes.machine = {
                     imports = [ self.nixosModules.angrr ];
                   };
-                  node.pkgs = lib.mkForce (pkgs.extend (self.overlays.default)).pkgsLinux;
+                  node.pkgs = lib.mkForce (pkgs.extend (self.overlays.default));
                 };
                 nixos-test-upstream-service = pkgs.testers.runNixOSTest {
                   imports = [ "${inputs.nixpkgs}/nixos/tests/angrr.nix" ];
-                  node.pkgs = lib.mkForce (pkgs.extend (self.overlays.default)).pkgsLinux;
+                  node.pkgs = lib.mkForce (pkgs.extend (self.overlays.default));
                 };
                 nixos-test-filter = pkgs.testers.runNixOSTest {
                   imports = [ ./nixos/tests/filter.nix ];
-                  node.pkgs = lib.mkForce (pkgs.extend (self.overlays.default)).pkgsLinux;
+                  node.pkgs = lib.mkForce (pkgs.extend (self.overlays.default));
                 };
+              })
+
+              (lib.mkIf isDarwin {
+                system =
+                  (inputs.nix-darwin.lib.darwinSystem {
+                    modules = [
+                      self.darwinModules.angrr
+                      { system.stateVersion = 6; } # required by nix-darwin
+                    ];
+                    pkgs = pkgs.extend (self.overlays.default);
+                  }).system;
               })
             ];
             treefmt = {
