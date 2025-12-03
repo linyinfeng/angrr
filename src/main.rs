@@ -281,6 +281,19 @@ impl RunContext {
             }
         }
 
+        // filter with --path-regex
+        if !self
+            .options
+            .path_regex
+            .is_match(target.as_os_str().as_bytes())
+        {
+            log::debug!(
+                "ignore {target:?} due to path regex ({}) mismatch",
+                self.options.path_regex
+            );
+            return Ok(None);
+        }
+
         // finally call the external filter
         if let Some(filter) = &self.external_filter {
             let input = filter::Input {

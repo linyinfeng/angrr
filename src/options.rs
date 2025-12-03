@@ -1,4 +1,5 @@
 use clap::{ArgAction, Parser, Subcommand, ValueEnum};
+use regex::bytes::Regex;
 
 use core::fmt;
 use std::{ffi::OsString, path::PathBuf, time::Duration};
@@ -124,6 +125,13 @@ also set `--owned-only=false` as default value of `--owned-only`"
         help = "directories (relative to user's home) to ignore"
     )]
     pub ignore_directories_in_home: Vec<PathBuf>,
+    #[arg(
+        long,
+        value_name = "REGEX",
+        default_value_t = Regex::new(r"/\.direnv/|/result.*$").unwrap(),
+        help = "only paths (absolute) matching the regex will be monitored",
+    )]
+    pub path_regex: Regex,
     #[arg(
         long,
         value_name = "EXECUTABLE",

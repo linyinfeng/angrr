@@ -16,5 +16,6 @@ humantime = "*"
 dialoguer = "*"
 uzers = "*"
 nix = { version = "*", features = ["fs"] }
+regex = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
