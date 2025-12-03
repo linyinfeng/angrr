@@ -242,7 +242,11 @@ impl RunContext {
                 return Ok(None);
             }
             Err(e) => {
-                log::warn!("ignore {target:?}, can not read metadata: {e}");
+                if e.kind() == io::ErrorKind::PermissionDenied && self.options.owned_only {
+                    log::debug!("ignore {target:?} due to permission denied and in --owned-only mode");
+                } else {
+                    log::warn!("ignore {target:?}, can not read metadata: {e}");
+                }
                 return Ok(None);
             }
         };
