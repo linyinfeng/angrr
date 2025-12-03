@@ -29,8 +29,8 @@
           angrr run --period 0s \
             --interactive=never \
             --owned-only=true \
-            --ignore-directories '/tmp/ignore-directory' \
-            --ignore-directories-in-home 'ignore-directory' \
+            --ignore-prefixes '/tmp/ignore-directory' \
+            --ignore-prefixes-in-home 'ignore-directory' \
             --filter=jq --filter-args="--exit-status" --filter-args='.path | test("/result-special-filter$") | not' \
             --output=/tmp/removed
         '';
