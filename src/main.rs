@@ -1,3 +1,4 @@
+mod filter;
 mod options;
 
 use std::{
@@ -28,7 +29,10 @@ use nix::{
 use options::{Interactive, Options, RunOptions};
 use uzers::{get_user_by_uid, os::unix::UserExt};
 
-use crate::options::{CommonOptions, TouchOptions};
+use crate::{
+    filter::Filter,
+    options::{CommonOptions, TouchOptions},
+};
 
 fn main() -> anyhow::Result<()> {
     let crate_name = crate_name!();
@@ -87,6 +91,7 @@ fn main() -> anyhow::Result<()> {
 struct RunContext {
     common_options: CommonOptions,
     options: RunOptions,
+    external_filter: Option<Filter>,
     uid: u32,
     now: SystemTime,
     term: Term,
@@ -97,7 +102,7 @@ struct RunContext {
 #[derive(Debug)]
 struct Item {
     link_path: PathBuf,
-    reason: Reason,
+    status: Status,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -108,7 +113,7 @@ enum Action {
 }
 
 #[derive(Debug, Clone)]
-struct Reason {
+struct Status {
     target: PathBuf,
     elapsed: Duration,
 }
@@ -116,7 +121,8 @@ struct Reason {
 #[derive(Debug, Default)]
 struct Statistics {
     traversed: Counter,
-    candidate: Counter,
+    monitored: Counter,
+    expired: Counter,
     invalid: Counter,
     removed: Counter,
 }
@@ -135,6 +141,10 @@ struct Counter(AtomicUsize);
 
 impl RunContext {
     fn new(common_options: CommonOptions, options: RunOptions) -> anyhow::Result<Self> {
+        let external_filter = options.filter.as_ref().map(|program| Filter {
+            program: program.clone(),
+            arguments: options.filter_args.clone(),
+        });
         let uid = uzers::get_current_uid();
         let now = SystemTime::now();
         let term = Term::stderr();
@@ -146,6 +156,7 @@ impl RunContext {
         let context = Self {
             common_options,
             options,
+            external_filter,
             uid,
             now,
             term,
@@ -168,10 +179,16 @@ impl RunContext {
                     format!("failed to read directory entry from directory {path:?}")
                 })?;
                 let link_path = link.path();
-                match self.check(&link_path)? {
-                    Some(reason) => {
-                        self.statistic.candidate.increase();
-                        let item = Item { link_path, reason };
+                match self.filter_and_map_to_status(&link_path)? {
+                    Some(status) => {
+                        let item = Item { link_path, status };
+                        self.statistic.monitored.increase();
+                        if item.status.elapsed < self.options.period {
+                            // not expired
+                            log::trace!("keep {:?}, not expired", item.link_path);
+                            continue;
+                        }
+                        self.statistic.expired.increase();
                         match self.options.interactive {
                             Interactive::Always => {
                                 self.notify(&item, Action::AboutToRemove, true)?;
@@ -220,11 +237,14 @@ impl RunContext {
         Ok(())
     }
 
-    fn check<P: AsRef<Path>>(&self, link_path: P) -> anyhow::Result<Option<Reason>> {
+    fn filter_and_map_to_status<P: AsRef<Path>>(
+        &self,
+        link_path: P,
+    ) -> anyhow::Result<Option<Status>> {
         let link_path = link_path.as_ref();
         let target = fs::read_link(link_path)
             .with_context(|| format!("failed to read symbolic link {link_path:?}"))?;
-        log::trace!("processing {link_path:?} -> {target:?}");
+        log::trace!("filtering {link_path:?} -> {target:?}");
         let metadata = match fs::symlink_metadata(&target) {
             Ok(m) => m,
             Err(e) if e.kind() == io::ErrorKind::NotFound => {
@@ -232,14 +252,24 @@ impl RunContext {
                 return Ok(None);
             }
             Err(e) => {
-                log::warn!("ignore {target:?}, can not read metadata: {e}");
+                if e.kind() == io::ErrorKind::PermissionDenied && self.options.owned_only {
+                    log::debug!(
+                        "ignore {target:?} due to permission denied and in --owned-only mode"
+                    );
+                } else {
+                    log::warn!("ignore {target:?}, can not read metadata: {e}");
+                }
                 return Ok(None);
             }
         };
+
+        // filter with --ignore-directories and --ignore-directories-in-home
         if self.ignored(&target) || self.ignored_in_home(&target, &metadata) {
             log::debug!("ignore {target:?}");
             return Ok(None);
         }
+
+        // filter with --owned-only
         if self.options.owned_only {
             let file_uid = metadata.uid();
             if file_uid != self.uid {
@@ -250,6 +280,35 @@ impl RunContext {
                 return Ok(None);
             }
         }
+
+        // filter with --path-regex
+        if !self
+            .options
+            .path_regex
+            .is_match(target.as_os_str().as_bytes())
+        {
+            log::debug!(
+                "ignore {target:?} due to path regex ({}) mismatch",
+                self.options.path_regex
+            );
+            return Ok(None);
+        }
+
+        // finally call the external filter
+        if let Some(filter) = &self.external_filter {
+            let input = filter::Input {
+                path: target.clone(),
+                gc_root: link_path.to_path_buf(),
+            };
+            let not_ignored = filter
+                .run(&input)
+                .with_context(|| format!("failed to run filter on input: {input:?}"))?;
+            if !not_ignored {
+                log::debug!("ignore {target:?} due to external filter decision");
+                return Ok(None);
+            }
+        }
+
         let target_mtime = metadata
             .modified()
             .with_context(|| format!("failed to get modified time of file {target:?}"))?;
@@ -257,12 +316,8 @@ impl RunContext {
             .now
             .duration_since(target_mtime)
             .unwrap_or_else(|_| Duration::new(0, 0));
-        log::trace!("elapsed: {}", humantime::format_duration(elapsed));
-        if elapsed <= self.options.period {
-            return Ok(None);
-        }
 
-        Ok(Some(Reason { target, elapsed }))
+        Ok(Some(Status { target, elapsed }))
     }
 
     fn validate_and_prompt<P: AsRef<Path>>(&self, target: P) -> anyhow::Result<bool> {
@@ -317,7 +372,7 @@ impl RunContext {
             )?;
             if with_reason {
                 term.write_line(&add_indent(
-                    &item.reason.format_with_style(term),
+                    &item.status.format_with_style(term),
                     reason_indent,
                 ))?;
             }
@@ -327,11 +382,11 @@ impl RunContext {
                 term,
                 "{} {:?}",
                 action.format_with_style(term),
-                item.reason.target
+                item.status.target
             )?;
             if with_reason {
                 term.write_line(&add_indent(
-                    &item.reason.format_with_style_no_target(term),
+                    &item.status.format_with_style_no_target(term),
                     reason_indent,
                 ))?;
             }
@@ -344,7 +399,7 @@ impl RunContext {
             &item.link_path
         } else {
             // validate before remove target
-            let target = &item.reason.target;
+            let target = &item.status.target;
             if !self.validate_and_prompt(target)? {
                 self.notify(item, Action::Ignored, false)?;
                 return Ok(());
@@ -437,7 +492,7 @@ impl Action {
     }
 }
 
-impl Reason {
+impl Status {
     fn format_with_style(&self, term: &Term) -> String {
         let Self { target, elapsed } = self;
         format!(
@@ -459,14 +514,16 @@ impl Reason {
 impl Statistics {
     fn format_with_style(self, term: &Term) -> String {
         let traversed = self.traversed.done();
-        let candidate = self.candidate.done();
+        let monitored = self.monitored.done();
+        let expired = self.expired.done();
         let removed = self.removed.done();
         let invalid = self.invalid.done();
         let kept = traversed - removed;
         let num_style = |n| term.style().bold().apply_to(n);
         [
             format!("traversed: {}", num_style(traversed)),
-            format!("candidate: {}", num_style(candidate)),
+            format!("monitored: {}", num_style(monitored)),
+            format!("expired:   {}", num_style(expired)),
             format!("removed:   {}", num_style(removed)),
             format!("invalid:   {}", num_style(invalid)),
             format!("kept:      {}", num_style(kept)),

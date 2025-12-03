@@ -1,4 +1,5 @@
 use clap::{ArgAction, Parser, Subcommand, ValueEnum};
+use regex::bytes::Regex;
 
 use core::fmt;
 use std::{ffi::OsString, path::PathBuf, time::Duration};
@@ -116,10 +117,37 @@ also set `--owned-only=false` as default value of `--owned-only`"
     #[arg(
         long,
         value_name = "PATH",
-        default_values_os_t = [PathBuf::from(".local/state/nix/profiles")],
+        default_values_os_t = [
+            PathBuf::from(".local/state/nix/profiles"),
+            PathBuf::from(".local/state/home-manager/gcroots"),
+            PathBuf::from(".cache/nix/flake-registry.json")
+        ],
         help = "directories (relative to user's home) to ignore"
     )]
     pub ignore_directories_in_home: Vec<PathBuf>,
+    #[arg(
+        long,
+        value_name = "REGEX",
+        default_value_t = Regex::new(r"/\.direnv/|/result.*$").unwrap(),
+        help = "only paths (absolute) matching the regex will be monitored",
+    )]
+    pub path_regex: Regex,
+    #[arg(
+        long,
+        value_name = "EXECUTABLE",
+        help = "\
+an external program to filter paths that will be applied after all the other filter options
+a json object containing the path information will be passed to the stdin of the program,
+use `--filter=cat --verbose` to view the input json object.
+if the program exits with code 0, then the path will be monitored; otherwise it will be ignored"
+    )]
+    pub filter: Option<PathBuf>,
+    #[arg(
+        long,
+        value_name = "ARGUMENTS",
+        help = "arguments to pass to the external filter program"
+    )]
+    pub filter_args: Vec<OsString>,
     #[arg(
         long,
         help = "\
