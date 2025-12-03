@@ -87,7 +87,10 @@
                   (inputs.nix-darwin.lib.darwinSystem {
                     modules = [
                       self.darwinModules.angrr
-                      { system.stateVersion = 6; } # required by nix-darwin
+                      {
+                        programs.direnv.enable = true;
+                        system.stateVersion = 6; # required by nix-darwin
+                      }
                     ];
                     pkgs = pkgs.extend (self.overlays.default);
                   }).system;

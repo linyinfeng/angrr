@@ -5,7 +5,7 @@
       enable = lib.mkEnableOption "angrr";
       package = lib.mkPackageOption pkgs "angrr" { };
       period = lib.mkOption {
-        type = with lib.types; str;
+        type = lib.types.str;
         default = "7d";
         example = "2weeks";
         description = ''
@@ -13,14 +13,14 @@
         '';
       };
       removeRoot = lib.mkOption {
-        type = with lib.types; bool;
+        type = lib.types.bool;
         default = false;
         description = ''
           Whether to pass the `--remove-root` option to angrr.
         '';
       };
       ownedOnly = lib.mkOption {
-        type = with lib.types; bool;
+        type = lib.types.bool;
         default = false;
         description = ''
           Control the `--remove-root=<true|false>` option of angrr.
@@ -48,6 +48,20 @@
         default = [ ];
         description = ''
           Extra command-line arguments pass to angrr.
+        '';
+      };
+    };
+    programs.direnv.angrr = {
+      enable = lib.mkEnableOption "angrr direnv integration" // {
+        default = true;
+        example = false;
+      };
+      autoUse = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        example = false;
+        description = ''
+          Whether to automatically use angrr before loading .envrc.
         '';
       };
     };
