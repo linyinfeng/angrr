@@ -116,7 +116,11 @@ also set `--owned-only=false` as default value of `--owned-only`"
     #[arg(
         long,
         value_name = "PATH",
-        default_values_os_t = [PathBuf::from(".local/state/nix/profiles")],
+        default_values_os_t = [
+            PathBuf::from(".local/state/nix/profiles"),
+            PathBuf::from(".local/state/home-manager/gcroots"),
+            PathBuf::from(".cache/nix/flake-registry.json")
+        ],
         help = "directories (relative to user's home) to ignore"
     )]
     pub ignore_directories_in_home: Vec<PathBuf>,
