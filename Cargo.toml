@@ -16,3 +16,5 @@ humantime = "*"
 dialoguer = "*"
 uzers = "*"
 nix = { version = "*", features = ["fs"] }
+serde = { version = "*", features = ["derive"] }
+serde_json = "*"

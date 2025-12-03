@@ -122,6 +122,22 @@ also set `--owned-only=false` as default value of `--owned-only`"
     pub ignore_directories_in_home: Vec<PathBuf>,
     #[arg(
         long,
+        value_name = "EXECUTABLE",
+        help = "\
+an external program to filter paths that will be applied after all the other filter options
+a json object containing the path information will be passed to the stdin of the program,
+use `--filter=cat --verbose` to view the input json object.
+if the program exits with code 0, then the path will be monitored; otherwise it will be ignored"
+    )]
+    pub filter: Option<PathBuf>,
+    #[arg(
+        long,
+        value_name = "ARGUMENTS",
+        help = "arguments to pass to the external filter program"
+    )]
+    pub filter_args: Vec<OsString>,
+    #[arg(
+        long,
         help = "\
 force delete targets of GC roots that do not point to store
 validation only happens when `--remove-root` is not specified"

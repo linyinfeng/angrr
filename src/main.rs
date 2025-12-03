@@ -1,3 +1,4 @@
+mod filter;
 mod options;
 
 use std::{
@@ -28,7 +29,10 @@ use nix::{
 use options::{Interactive, Options, RunOptions};
 use uzers::{get_user_by_uid, os::unix::UserExt};
 
-use crate::options::{CommonOptions, TouchOptions};
+use crate::{
+    filter::Filter,
+    options::{CommonOptions, TouchOptions},
+};
 
 fn main() -> anyhow::Result<()> {
     let crate_name = crate_name!();
@@ -87,6 +91,7 @@ fn main() -> anyhow::Result<()> {
 struct RunContext {
     common_options: CommonOptions,
     options: RunOptions,
+    external_filter: Option<Filter>,
     uid: u32,
     now: SystemTime,
     term: Term,
@@ -135,6 +140,10 @@ struct Counter(AtomicUsize);
 
 impl RunContext {
     fn new(common_options: CommonOptions, options: RunOptions) -> anyhow::Result<Self> {
+        let external_filter = options.filter.as_ref().map(|program| Filter {
+            program: program.clone(),
+            arguments: options.filter_args.clone(),
+        });
         let uid = uzers::get_current_uid();
         let now = SystemTime::now();
         let term = Term::stderr();
@@ -146,6 +155,7 @@ impl RunContext {
         let context = Self {
             common_options,
             options,
+            external_filter,
             uid,
             now,
             term,
@@ -260,6 +270,21 @@ impl RunContext {
         log::trace!("elapsed: {}", humantime::format_duration(elapsed));
         if elapsed <= self.options.period {
             return Ok(None);
+        }
+
+        // finally call the external filter
+        if let Some(filter) = &self.external_filter {
+            let input = filter::Input {
+                path: target.clone(),
+                gc_root: link_path.to_path_buf(),
+            };
+            let not_ignored = filter
+                .run(&input)
+                .with_context(|| format!("failed to run filter on input: {input:?}"))?;
+            if !not_ignored {
+                log::debug!("ignore {target:?} due to external filter decision");
+                return Ok(None);
+            }
         }
 
         Ok(Some(Reason { target, elapsed }))
