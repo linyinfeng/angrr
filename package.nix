@@ -1,6 +1,5 @@
 {
   lib,
-  stdenv,
   rustPlatform,
   installShellFiles,
   nixosTests,
@@ -17,15 +16,18 @@ rustPlatform.buildRustPackage (finalAttrs: {
 
   # flake only stuff
 
-  inherit (cargoToml.package) version;
+  inherit (cargoToml.workspace.package) version;
   src =
     with lib.fileset;
     toSource {
       root = ./.;
       fileset = unions [
+        ./angrr
+        ./xtask
         ./Cargo.toml
         ./Cargo.lock
-        ./src
+        ./.cargo
+
         ./direnv
       ];
     };
@@ -38,15 +40,21 @@ rustPlatform.buildRustPackage (finalAttrs: {
 
   # contents below should be upstreamed to nixpkgs eventually
 
+  buildAndTestSubdir = "angrr";
+
   nativeBuildInputs = [ installShellFiles ];
+  postBuild = ''
+    mkdir --parents build/{man-pages,shell-completions}
+    cargo xtask man-pages --out build/man-pages
+    cargo xtask shell-completions --out build/shell-completions
+  '';
   postInstall = ''
     install -m400 -D ./direnv/angrr.sh $out/share/direnv/lib/angrr.sh
-  ''
-  + lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
+    installManPage build/man-pages/*
     installShellCompletion --cmd angrr \
-      --bash <($out/bin/angrr completion bash) \
-      --fish <($out/bin/angrr completion fish) \
-      --zsh  <($out/bin/angrr completion zsh)
+      --bash build/shell-completions/angrr.bash \
+      --fish build/shell-completions/angrr.fish \
+      --zsh  build/shell-completions/_angrr
   '';
 
   passthru = {

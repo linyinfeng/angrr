@@ -1,9 +1,7 @@
 result*
-.direnv
-target
-.vscode
+/.direnv
 
-
-# Added by cargo
-
+/build
 /target
+
+.vscode

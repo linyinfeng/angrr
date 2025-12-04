@@ -1,0 +1,25 @@
+[package]
+name = "angrr"
+description = "Auto Nix GC Roots Retention"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+default-run = "angrr"
+
+[dependencies]
+clap = { version = "*", features = ["cargo", "derive"] }
+clap_complete = "*"
+log = "*"
+pretty_env_logger = "*"
+anyhow = "*"
+humantime = "*"
+dialoguer = "*"
+uzers = "*"
+nix = { version = "*", features = ["fs"] }
+regex = "*"
+serde = { version = "*", features = ["derive"] }
+serde_json = "*"

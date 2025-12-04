@@ -1,21 +1,11 @@
-[package]
-name = "angrr"
-authors = ["Lin Yinfeng <lin.yinfeng@outlook.com>"]
+[workspace]
+resolver = "3"
+members = ["angrr", "xtask"]
+
+[workspace.package]
 version = "0.1.5"
 edition = "2024"
 license = "MIT"
-description = "Auto Nix GC Roots Retention"
-
-[dependencies]
-clap = { version = "*", features = ["cargo", "derive"] }
-clap_complete = "*"
-log = "*"
-pretty_env_logger = "*"
-anyhow = "*"
-humantime = "*"
-dialoguer = "*"
-uzers = "*"
-nix = { version = "*", features = ["fs"] }
-regex = "*"
-serde = { version = "*", features = ["derive"] }
-serde_json = "*"
+authors = ["Lin Yinfeng <lin.yinfeng@outlook.com>"]
+homepage = "https://github.com/linyinfeng/angrr"
+repository = "https://github.com/linyinfeng/angrr"

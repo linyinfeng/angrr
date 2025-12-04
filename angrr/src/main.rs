@@ -1,5 +1,4 @@
 mod filter;
-mod options;
 
 use std::{
     ffi::OsStr,
@@ -15,8 +14,9 @@ use std::{
     time::{Duration, SystemTime},
 };
 
+use angrr::options::{self, Interactive, Options, RunOptions};
 use anyhow::Context;
-use clap::{CommandFactory, Parser, crate_name};
+use clap::{Parser, crate_name};
 use dialoguer::{Confirm, console::Term};
 use humantime::format_duration;
 use nix::{
@@ -26,13 +26,11 @@ use nix::{
         time::TimeSpec,
     },
 };
-use options::{Interactive, Options, RunOptions};
 use uzers::{get_user_by_uid, os::unix::UserExt};
 
-use crate::{
-    filter::Filter,
-    options::{CommonOptions, TouchOptions},
-};
+use angrr::options::{CommonOptions, TouchOptions};
+
+use crate::filter::Filter;
 
 fn main() -> anyhow::Result<()> {
     let crate_name = crate_name!();
@@ -80,9 +78,6 @@ fn main() -> anyhow::Result<()> {
             let context = TouchContext::new(options.common, touch_opts);
             log::trace!("context = {context:#?}");
             context.touch()
-        }
-        options::Commands::Completion(gen_options) => {
-            generate_shell_completions(gen_options, crate_name)
         }
     }
 }
@@ -656,14 +651,4 @@ impl TouchContext {
         }
         Ok(())
     }
-}
-
-fn generate_shell_completions(
-    gen_options: options::CompletionOptions,
-    command_name: &str,
-) -> anyhow::Result<()> {
-    let mut cli = options::Options::command();
-    let mut stdout = std::io::stdout();
-    clap_complete::generate(gen_options.shell, &mut cli, command_name, &mut stdout);
-    Ok(())
 }

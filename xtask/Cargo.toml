@@ -1,0 +1,12 @@
+[package]
+name = "xtask"
+version = "0.0.0"
+edition.workspace = true
+publish = false
+
+[dependencies]
+angrr = { path = "../angrr" }
+clap = { version = "*", features = ["cargo", "derive"] }
+clap_complete = "*"
+clap_mangen = "*"
+anyhow = "*"

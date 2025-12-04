@@ -52,7 +52,6 @@ pub struct CommonOptions {
 pub enum Commands {
     Run(RunOptions),
     Touch(TouchOptions),
-    Completion(CompletionOptions),
 }
 
 #[derive(Clone, Debug, Parser)]
@@ -195,13 +194,6 @@ pub struct TouchOptions {
     pub silent: bool,
     #[arg(long, help = "do not actually touch file")]
     pub dry_run: bool,
-}
-
-#[derive(Clone, Debug, Parser)]
-#[command(about = "Generate shell completions")]
-#[command(arg_required_else_help = true)]
-pub struct CompletionOptions {
-    pub shell: clap_complete::Shell,
 }
 
 #[derive(Clone, Debug, ValueEnum, PartialEq, Eq)]
