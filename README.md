@@ -33,7 +33,7 @@ By default, `angrr` monitors paths matching the regex `/\.direnv/|/result.*$`. U
   ```
 
 Use the `--dry-run` option to test the changes without actually deleting anything.
-Use the `--help` option to see all available options.
+See `man angrr` or `angrr --help` for more documentation.
 
 For the syntax of `--period <PERIOD>`, please refer to [the documentation of humantime::parse_duration](https://docs.rs/humantime/latest/humantime/fn.parse_duration.html).
 
