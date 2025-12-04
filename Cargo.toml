@@ -1,7 +1,7 @@
 [package]
 name = "angrr"
 authors = ["Lin Yinfeng <lin.yinfeng@outlook.com>"]
-version = "0.1.4"
+version = "0.1.5"
 edition = "2024"
 license = "MIT"
 description = "Auto Nix GC Roots Retention"
