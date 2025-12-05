@@ -68,7 +68,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
   };
 
   meta = {
-    description = "Tool for auto Nix GC roots retention";
+    description = "Tool for temporary GC roots retention";
     homepage = "https://github.com/linyinfeng/angrr";
     license = [ lib.licenses.mit ];
     maintainers = with lib.maintainers; [ yinfeng ];

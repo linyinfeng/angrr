@@ -1,4 +1,4 @@
-# angrr - Auto Nix GC Roots Retention
+# angrr
 
 If you are a heavy user of [nix-direnv](https://github.com/nix-community/nix-direnv), you might find that auto GC roots of projects that haven't been accessed for a long time won't be automatically removed, preventing old store paths from being garbage collected.
 
@@ -6,13 +6,15 @@ This tool deletes auto GC roots based on the **modification time** of their symb
 
 By default, `angrr` monitors paths matching the regex `/\.direnv/|/result.*$`. Use the `--path-regex <REGEX>` option to customize this behavior.
 
-⚠️**Note**: direnv integration was added in version `0.1.2`, but the version didn’t make it into the `nixos-25.11` channel — currently it’s only available in `nixos-unstable`.
+⚠️ **Scope of this tool**: Currently this tool is designed to manage temporary GC roots, such as `result` or direnv-created roots. It is not intended for profile-based GC roots created by tools like `nixos-rebuild`, `home-manager`, `nix profile`, or `nix-env`. See the [discussion in #30](https://github.com/linyinfeng/angrr/issues/30).
+
+⚠️**Note**: Direnv integration was added in version `0.1.2`, but the version didn’t make it into the `nixos-25.11` channel — currently it’s only available in `nixos-unstable`.
 
 ## Usage
 
 - For non-root users:
 
-  The following command deletes all auto GC roots older than 7 days owned by the current user.
+  The following command deletes all monitored GC roots (direnv and `result*` by default) older than 7 days owned by the current user.
 
   ```bash
   nix run github:linyinfeng/angrr -- run --period 7d
@@ -20,7 +22,7 @@ By default, `angrr` monitors paths matching the regex `/\.direnv/|/result.*$`. U
 
 - Manage GC roots for all users as the root user:
 
-  The following command deletes all auto GC roots older than 7 days owned by all users.
+  The following command deletes all monitored GC roots (direnv and `result*` by default) older than 7 days owned by all users.
 
   ```bash
   sudo nix run github:linyinfeng/angrr -- run --period 7d --owned-only=false
