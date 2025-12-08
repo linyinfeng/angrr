@@ -30,12 +30,12 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn generate_man_pages(gen_options: ManPageOptions) -> anyhow::Result<()> {
-    clap_mangen::generate_to(angrr::options::Options::command(), &gen_options.out)?;
+    clap_mangen::generate_to(angrr::command::Options::command(), &gen_options.out)?;
     Ok(())
 }
 
 fn generate_shell_completions(gen_options: CompletionOptions) -> anyhow::Result<()> {
-    let mut cli = angrr::options::Options::command();
+    let mut cli = angrr::command::Options::command();
     let out = &gen_options.out;
     clap_complete::generate_to(Bash, &mut cli, "angrr", out)?;
     clap_complete::generate_to(Fish, &mut cli, "angrr", out)?;

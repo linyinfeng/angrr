@@ -27,6 +27,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
         ./Cargo.toml
         ./Cargo.lock
         ./.cargo
+        ./etc
 
         ./direnv
       ];

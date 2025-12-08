@@ -1,0 +1,11 @@
+# default configuration for angrr
+
+[temporary_root_policies.result]
+type = "temporary"
+path_regex = '/result[^/]*$'
+period = "1d"
+
+[temporary_root_policies.direnv]
+type = "temporary"
+path_regex = '/\.direnv/'
+period = "14d"

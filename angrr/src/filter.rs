@@ -1,17 +1,17 @@
 use std::{
-    ffi::OsString,
     io::Write,
     path::PathBuf,
     process::{Command, Stdio},
 };
 
 use anyhow::Context;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Filter {
     pub program: PathBuf,
-    pub arguments: Vec<OsString>,
+    #[serde(default)]
+    pub arguments: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]

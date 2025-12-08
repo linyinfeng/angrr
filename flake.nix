@@ -66,14 +66,10 @@
               # linux only
               (lib.mkIf isLinux {
                 nixos-test-service = pkgs.testers.runNixOSTest {
-                  imports = [ "${inputs.nixpkgs}/nixos/tests/angrr.nix" ];
+                  imports = [ ./nixos/tests/angrr.nix ];
                   nodes.machine = {
                     imports = [ self.nixosModules.angrr ];
                   };
-                  node.pkgs = lib.mkForce (pkgs.extend (self.overlays.default));
-                };
-                nixos-test-upstream-service = pkgs.testers.runNixOSTest {
-                  imports = [ "${inputs.nixpkgs}/nixos/tests/angrr.nix" ];
                   node.pkgs = lib.mkForce (pkgs.extend (self.overlays.default));
                 };
                 nixos-test-filter = pkgs.testers.runNixOSTest {
