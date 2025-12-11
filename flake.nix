@@ -74,6 +74,9 @@
                 };
                 nixos-test-filter = pkgs.testers.runNixOSTest {
                   imports = [ ./nixos/tests/filter.nix ];
+                  nodes.machine = {
+                    imports = [ self.nixosModules.angrr ];
+                  };
                   node.pkgs = lib.mkForce (pkgs.extend (self.overlays.default));
                 };
               })

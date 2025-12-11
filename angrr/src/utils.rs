@@ -1,15 +1,27 @@
-use std::{fs, path::Path};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use dialoguer::console::Term;
 
-pub fn validate_store_path<P1: AsRef<Path>, P2: AsRef<Path>>(store: P1, target: P2) -> bool {
+pub fn validate_store_path<P1: AsRef<Path>, P2: AsRef<Path>>(
+    store: P1,
+    target: P2,
+) -> Option<PathBuf> {
     let store = store.as_ref();
     let target = target.as_ref();
     match fs::canonicalize(target) {
-        Ok(path) => path.starts_with(store),
+        Ok(path) => {
+            if path.starts_with(store) {
+                Some(path)
+            } else {
+                None
+            }
+        }
         Err(e) => {
             log::warn!("failed to canonicalize {target:?} for validation: {e}");
-            false
+            None
         }
     }
 }

@@ -5,7 +5,16 @@
     machine = {
       services.angrr = {
         enable = true;
-        period = "7d";
+        config = {
+          temporary_root_policies = {
+            result = {
+              period = "7d";
+            };
+            direnv = {
+              period = "14d";
+            };
+          };
+        };
       };
       # `angrr.service` integrates to `nix-gc.service` by default
       nix.gc.automatic = true;
@@ -72,7 +81,7 @@
     machine.succeed("cd /tmp/test-direnv; direnv allow; direnv exec . true")
 
     # The root will be removed if we does not use the direnv recently
-    machine.succeed("date -s '8 days'")
+    machine.succeed("date -s '15 days'")
     machine.systemctl("start nix-gc.service")
     machine.succeed("test ! -e /tmp/test-direnv/.direnv/gc-root")
 
@@ -80,7 +89,7 @@
     machine.succeed("nix build /run/current-system --out-link /tmp/test-direnv/.direnv/gc-root")
 
     # The root will not be remove if we use the direnv recently
-    machine.succeed("date -s '8 days'")
+    machine.succeed("date -s '15 days'")
     machine.succeed("cd /tmp/test-direnv; direnv exec . true")
     machine.systemctl("start nix-gc.service")
     machine.succeed("readlink /tmp/test-direnv/.direnv/gc-root")

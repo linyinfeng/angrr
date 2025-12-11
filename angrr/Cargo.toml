@@ -14,6 +14,7 @@ default-run = "angrr"
 clap = { version = "*", features = ["cargo", "derive"] }
 clap_complete = "*"
 figment = { version = "*", features = ["toml", "env", "json"] }
+toml = "*"
 rust-embed = "*"
 log = { version = "*", features = ["serde"] }
 pretty_env_logger = "*"

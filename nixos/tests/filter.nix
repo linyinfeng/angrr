@@ -5,9 +5,29 @@
     machine =
       { pkgs, ... }:
       {
-        environment.systemPackages = with pkgs; [
-          angrr
-        ];
+        services.angrr = {
+          enable = true;
+          config = {
+            temporary_root_policies = {
+              direnv = {
+                period = "0s";
+              };
+              result = {
+                period = "0s";
+                ignore_prefixes = [ "/tmp/ignore-directory" ];
+                ignore_prefixes_in_home = [ "ignore-directory" ];
+                filter = {
+                  program = "jq";
+                  arguments = [
+                    "--exit-status"
+                    ".path | test(\"/result-special-filter$\") | not"
+                  ];
+                };
+              };
+            };
+          };
+        };
+        programs.direnv.enable = true;
         # Create two normal nix users for test
         users.users.user1.isNormalUser = true;
         users.users.user2.isNormalUser = true;
@@ -25,13 +45,8 @@
         runtimeInputs = [ pkgs.jq ]; # use angrr from path (from node pkgs)
         # use default --path-regex
         text = ''
-          RUST_LOG=angrr=debug \
-          angrr run --period 0s \
+          angrr run \
             --interactive=never \
-            --owned-only=true \
-            --ignore-prefixes '/tmp/ignore-directory' \
-            --ignore-prefixes-in-home 'ignore-directory' \
-            --filter=jq --filter-args="--exit-status" --filter-args='.path | test("/result-special-filter$") | not' \
             --output=/tmp/removed
         '';
       };

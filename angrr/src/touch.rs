@@ -6,17 +6,18 @@ use nix::sys::stat::UtimensatFlags;
 use nix::sys::stat::utimensat;
 use nix::sys::time::TimeSpec;
 
-use crate::{command::TouchOptions, config::Config, utils::validate_store_path};
+use crate::config::TouchConfig;
+use crate::{command::TouchOptions, utils::validate_store_path};
 
 #[derive(Debug)]
 pub struct TouchContext {
     options: TouchOptions,
-    config: Config,
+    config: TouchConfig,
     term: Term,
 }
 
 impl TouchContext {
-    pub fn new(options: TouchOptions, config: Config) -> Self {
+    pub fn new(options: TouchOptions, config: TouchConfig) -> Self {
         let term = Term::stderr();
         Self {
             options,
@@ -48,7 +49,7 @@ impl TouchContext {
                     return Ok(());
                 }
             };
-            if validate_store_path(&self.config.store, target) {
+            if let Some(_store_path) = validate_store_path(&self.config.store, target) {
                 // touch
                 if self.options.silent {
                     log::debug!("touch {path:?}");

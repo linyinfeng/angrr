@@ -1,43 +1,41 @@
 use std::{
     collections::{HashMap, HashSet},
-    path::PathBuf,
+    fmt::Debug,
+    path::{Path, PathBuf},
     time::Duration,
 };
 
+use anyhow::Context;
+use figment::{
+    Figment,
+    providers::{Env, Format, Toml},
+};
 use regex::bytes::Regex;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 use crate::{
     filter::Filter,
     policy::{profile::ProfilePolicy, temporary::TemporaryRootPolicy},
 };
 
+pub trait Validate {
+    fn validate(&self) -> anyhow::Result<()>;
+}
+
 /// Main angrr settings structure
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Config {
-    /// Default log level, can be overridden by command line options or
-    /// environment variables
-    #[serde(default = "default_log_filter")]
-    pub log_level: log::LevelFilter,
-
+pub struct RunConfig {
     /// Store path for validation
     ///
-    /// Only GC roots pointing to store will be deleted unless `force` is true.
+    /// Only GC roots pointing to store will be monitored.
     #[serde(default = "default_store_path")]
     pub store: PathBuf,
-
-    /// Force delete targets of GC roots that do not point to store.
-    ///
-    /// Validation only happens when `remove_root` is not true.
-    #[serde(default)]
-    pub force: bool,
 
     /// Only monitors owned symbolic link target of GC roots.
     #[serde(default = "normal_user")]
     pub owned_only: bool,
 
-    /// Remove GC root in `directory` instead of the symbolic link target of the
-    /// root.
+    /// Remove GC root in `directory` instead of the symbolic link target of them.
     #[serde(default)]
     pub remove_root: bool,
 
@@ -51,8 +49,8 @@ pub struct Config {
     pub profile_policies: HashMap<String, ProfileConfig>,
 }
 
-impl Config {
-    pub fn validate(&self) -> anyhow::Result<()> {
+impl Validate for RunConfig {
+    fn validate(&self) -> anyhow::Result<()> {
         let mut seen_profiles = HashSet::new();
         for cfg in self.profile_policies.values() {
             if seen_profiles.contains(&cfg.profile_path) {
@@ -64,9 +62,14 @@ impl Config {
                 seen_profiles.insert(cfg.profile_path.clone());
             }
         }
+        for (name, policy) in &self.profile_policies {
+            policy.validate(name)?;
+        }
         Ok(())
     }
+}
 
+impl RunConfig {
     pub fn enabled_temporary_root_policies(&self) -> Vec<(String, TemporaryRootPolicy)> {
         let mut result: Vec<_> = self
             .temporary_root_policies
@@ -139,6 +142,41 @@ pub struct ProfileConfig {
 
     /// Path to the profile
     pub profile_path: PathBuf,
+
+    /// Retention period
+    #[serde(with = "humantime_serde")]
+    #[serde(default)]
+    pub keep_since: Option<Duration>,
+
+    /// Keep the latest N GC roots in this profile
+    #[serde(default)]
+    pub keep_latest_n: Option<usize>,
+
+    /// Whether to keep the current activated system generation
+    ///
+    /// Only useful for system profiles.
+    #[serde(default = "default_keep_current_system")]
+    pub keep_current_system: bool,
+
+    /// Whether to keep the currently booted generation
+    ///
+    /// Only useful for system profiles.
+    #[serde(default = "default_keep_booted_system")]
+    pub keep_booted_system: bool,
+}
+
+impl ProfileConfig {
+    fn validate(&self, name: &str) -> anyhow::Result<()> {
+        if self.common.enable
+            && let (None, None) = (self.keep_since, self.keep_latest_n)
+        {
+            anyhow::bail!(
+                "at least one of keep_since and keep_latest_n must be set for profile policy {}",
+                name
+            );
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -146,10 +184,6 @@ pub struct CommonPolicyConfig {
     /// Enable this policy
     #[serde(default = "default_policy_enable")]
     pub enable: bool,
-}
-
-fn default_log_filter() -> log::LevelFilter {
-    log::LevelFilter::Info
 }
 
 fn default_store_path() -> PathBuf {
@@ -186,4 +220,59 @@ fn default_temporary_policy_priority_default() -> usize {
 fn normal_user() -> bool {
     let uid = uzers::get_current_uid();
     uid != 0
+}
+
+fn default_keep_current_system() -> bool {
+    true
+}
+
+fn default_keep_booted_system() -> bool {
+    true
+}
+
+/// Configuration for `touch` command
+///
+/// Must be part of `Config`.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct TouchConfig {
+    #[serde(default = "default_store_path")]
+    pub store: PathBuf,
+}
+
+impl Validate for TouchConfig {
+    fn validate(&self) -> anyhow::Result<()> {
+        Ok(())
+    }
+}
+
+pub fn load_config<P, C>(path: &Option<P>) -> anyhow::Result<C>
+where
+    P: AsRef<Path>,
+    C: Serialize + DeserializeOwned + Validate + Debug,
+{
+    let mut figment = Figment::new();
+    let mut file_loaded = false;
+    if let Some(p) = global_config_file() {
+        figment = figment.merge(Toml::file(&p));
+        file_loaded = true;
+    }
+    if let Some(p) = path {
+        figment = figment.merge(Toml::file(p.as_ref()));
+        file_loaded = true;
+    }
+    if !file_loaded {
+        log::info!("no configuration file found, using empty configuration");
+    }
+    let config: C = figment.merge(Env::prefixed("ANGRR_")).extract()?;
+    config.validate()?;
+    Ok(config)
+}
+
+pub fn display_config<C: Serialize>(config: &C) -> anyhow::Result<String> {
+    toml::to_string_pretty(config).context("failed to serialize config to TOML for display")
+}
+
+pub fn global_config_file() -> Option<PathBuf> {
+    let path = PathBuf::from("/etc/angrr/config.toml");
+    if path.exists() { Some(path) } else { None }
 }

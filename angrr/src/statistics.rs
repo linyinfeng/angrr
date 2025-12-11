@@ -43,7 +43,11 @@ pub struct Counter(AtomicUsize);
 
 impl Counter {
     pub fn increase(&self) {
-        self.0.fetch_add(1, Ordering::Relaxed);
+        self.add(1);
+    }
+
+    pub fn add(&self, n: usize) {
+        self.0.fetch_add(n, Ordering::Relaxed);
     }
 
     pub fn done(self) -> usize {

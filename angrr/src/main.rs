@@ -1,36 +1,19 @@
+use std::io::Write;
+
+use angrr::config::{RunConfig, load_config};
+use angrr::embedded;
 use angrr::{
     command::{Commands, Options},
-    config::Config,
     run::RunContext,
     touch::TouchContext,
 };
 use anyhow::Context;
 use clap::{Parser, crate_name};
-use figment::{
-    Figment,
-    providers::{Env, Format, Toml},
-};
-use rust_embed::Embed;
-
-#[derive(Embed)]
-#[folder = "../etc/"]
-struct Etc;
 
 fn main() -> anyhow::Result<()> {
     let crate_name = crate_name!();
 
     let options = Options::parse();
-    let default_config_file = Etc::get("angrr.toml")
-        .context("failed to get default config file from embedded resources")?;
-    let default_config_str = std::str::from_utf8(&default_config_file.data)
-        .context("failed to convert default config file to UTF-8 string")?;
-    let mut figment = Figment::new().merge(Toml::string(default_config_str));
-    if let Some(path) = options.common.config.as_ref() {
-        figment = figment.merge(Toml::file(path));
-    }
-    let config: Config = figment.merge(Env::prefixed("ANGRR_")).extract()?;
-
-    config.validate()?;
 
     let mut logger_builder = pretty_env_logger::formatted_builder();
 
@@ -41,8 +24,6 @@ fn main() -> anyhow::Result<()> {
     if let Ok(filter) = std::env::var("RUST_LOG") {
         logger_builder.parse_filters(&filter);
     };
-    // configuration file
-    logger_builder.filter_module(crate_name, config.log_level);
     // option
     if options.common.verbose != 0 {
         let mut iter = log::LevelFilter::iter().fuse();
@@ -59,24 +40,47 @@ fn main() -> anyhow::Result<()> {
         };
         logger_builder.filter_module(crate_name, level);
     }
+    // configuration file
+    if let Some(filter) = options.common.log_level {
+        logger_builder.filter_module(crate_name, filter);
+    }
     let builder_debug_info = format!("{logger_builder:?}");
     logger_builder.try_init()?;
     log::debug!("logger initialized with configuration: {builder_debug_info}");
 
     log::debug!("parsed options: {options:#?}");
-    log::debug!("loaded config: {config:#?}");
 
     match options.command {
         Commands::Run(run_opts) => {
+            let config = load_config(&options.common.config)?;
+            log::info!(
+                "loaded config:\n{}",
+                angrr::config::display_config(&config)?
+            );
             let context = RunContext::new(run_opts, config)?;
             log::trace!("context = {context:#?}");
             context.run()?;
             context.finish()?;
         }
+        Commands::Validate => {
+            let config: RunConfig = load_config(&options.common.config)?;
+            println!("{}", angrr::config::display_config(&config)?)
+        }
         Commands::Touch(touch_opts) => {
+            let config = load_config(&options.common.config)?;
             let context = TouchContext::new(touch_opts, config);
             log::trace!("context = {context:#?}");
             context.touch()?;
+        }
+        Commands::ExampleConfig => {
+            let example = embedded::Etc::get("example-config.toml")
+                .context("failed to extract embedded example configuration file")?;
+            std::io::stdout()
+                .write_all(&example.data)
+                .context("failed to write example configuration to stdout")?;
+            std::io::stdout()
+                .flush()
+                .context("failed to flush stdout")?;
         }
     }
     Ok(())

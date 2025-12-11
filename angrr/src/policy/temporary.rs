@@ -3,7 +3,8 @@ use std::os::unix::ffi::OsStrExt;
 use std::{fs, os::unix::fs::MetadataExt, path::Path};
 use uzers::{get_user_by_uid, os::unix::UserExt};
 
-use crate::{config::TemporaryRootConfig, filter, policy::GcRoot};
+use crate::gc_root::GcRoot;
+use crate::{config::TemporaryRootConfig, filter};
 
 #[derive(Clone, Debug)]
 pub struct TemporaryRootPolicy {

@@ -16,8 +16,7 @@ const HELP_TEMPLATE: &str = "\
 #[command(
     propagate_version = true,
     infer_long_args = true,
-    infer_subcommands = true,
-    flatten_help = true
+    infer_subcommands = true
 )]
 #[command(help_template = HELP_TEMPLATE)]
 pub struct Options {
@@ -29,19 +28,28 @@ pub struct Options {
 
 #[derive(Clone, Debug, Parser)]
 pub struct CommonOptions {
-    /// Path to settings file
-    #[arg(global = true, short, long, value_name = "FILE")]
-    pub config: Option<PathBuf>,
-
     /// Increase log level (will be overridden by --log-level).
     #[arg(global = true, short, long, action = clap::ArgAction::Count)]
     pub verbose: u8,
+
+    /// Log level (off, error, warn, info, debug, trace)
+    #[arg(global = true, long, value_name = "LEVEL")]
+    pub log_level: Option<log::LevelFilter>,
+
+    /// Path to configuration file
+    #[arg(global = true, short, long, value_name = "FILE")]
+    pub config: Option<PathBuf>,
 }
 
 #[derive(Clone, Debug, Subcommand)]
 pub enum Commands {
     Run(RunOptions),
     Touch(TouchOptions),
+
+    #[command(about = "Validate and print configuration")]
+    Validate,
+    #[command(about = "Print example configuration")]
+    ExampleConfig,
 }
 
 #[derive(Clone, Debug, Parser)]
