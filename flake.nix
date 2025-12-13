@@ -90,16 +90,7 @@
                       {
                         services.angrr = {
                           enable = true;
-                          config = {
-                            temporary-root-policies = {
-                              result = {
-                                period = "7d";
-                              };
-                              direnv = {
-                                period = "14d";
-                              };
-                            };
-                          };
+                          config = with builtins; fromTOML (readFile ./etc/example-config.toml);
                         };
                         programs.direnv.enable = true;
                         system.stateVersion = 6; # required by nix-darwin
