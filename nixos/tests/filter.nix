@@ -10,9 +10,11 @@
           config = {
             temporary-root-policies = {
               direnv = {
+                path-regex = "/\\.direnv/";
                 period = "0s";
               };
               result = {
+                path-regex = "/result[^/]*$";
                 period = "0s";
                 ignore-prefixes = [ "/tmp/ignore-directory" ];
                 ignore-prefixes-in-home = [ "ignore-directory" ];

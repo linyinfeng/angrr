@@ -16,23 +16,31 @@ in
         config = {
           temporary-root-policies = {
             result = {
+              path-regex = "/result[^/]*$";
               period = "7d";
             };
             direnv = {
+              path-regex = "/\\.direnv/";
               period = "14d";
             };
           };
           profile-policies = {
             system = {
-              enable = true; # disabled by default
-              keep-since = "7d";
-              keep-latest-n = 2;
-              # keep-booted-system = true;  # default value
-              # keep-current-system = true; # default value
+              profile-paths = [ "/nix/var/nix/profiles/system" ];
+              keep-since = "7d"; # do not keep based on time
+              keep-latest-n = 2; # keep latest
+              # keep-current-system = true; # default
+              # keep-booted-system = true;  # default
             };
             user = {
-              enable = true;
+              profile-paths = [
+                "~/.local/state/nix/profiles/profile"
+                "/nix/var/nix/profiles/per-user/root/profile"
+              ];
+              # keep-since = "0d"; # do not keep based on time
               keep-latest-n = 2;
+              keep-booted-system = false;
+              keep-current-system = false;
             };
           };
         };

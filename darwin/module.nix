@@ -30,29 +30,6 @@ in
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
       {
-        # Provide reasonable default policy configurations
-        services.angrr.config = {
-          temporary-root-policies = {
-            result = {
-              enable = lib.mkDefault true;
-              path-regex = "/result[^/]*$";
-            };
-          };
-          profile-policies = {
-            # Currently only the user profile
-            # I'm not familiar with nix-darwin profiles
-            user = {
-              enable = lib.mkDefault false;
-              profile-paths = [
-                "~/.local/state/nix/profiles/profile"
-                "/nix/var/nix/profiles/per-user/root/profile"
-              ];
-              keep-booted-system = false;
-              keep-current-system = false;
-            };
-          };
-        };
-
         environment.etc."angrr/config.toml".source = cfg.configFile;
 
         launchd.daemons.angrr = {
@@ -73,10 +50,6 @@ in
       })
 
       (lib.mkIf (config.programs.direnv.enable && direnvCfg.enable) {
-        services.angrr.config.temporary-root-policies.direnv = {
-          enable = lib.mkDefault true;
-          path-regex = "/\\.direnv/";
-        };
         environment.etc."direnv/lib/angrr.sh".source = "${cfg.package}/share/direnv/lib/angrr.sh";
         programs.direnv.direnvrcExtra = lib.mkIf direnvCfg.autoUse ''
           use angrr

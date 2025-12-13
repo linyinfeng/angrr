@@ -9,6 +9,38 @@ let
   cfg = config.services.angrr;
   direnvCfg = config.programs.direnv.angrr;
   toml = pkgs.formats.toml { };
+  exampleConfig = {
+    temporary-root-policies = {
+      direnv = {
+        path-regex = "/\\.direnv/";
+        period = "14d";
+      };
+      result = {
+        path-regex = "/result[^/]*$";
+        period = "3d";
+      };
+    };
+    profile-policies = {
+      system = {
+        profile-paths = [ "/nix/var/nix/profiles/system" ];
+        keep-since = "14d";
+        keep-latest-n = 5;
+        keep-booted-system = true;
+        keep-current-system = true;
+      };
+      user = {
+        enable = false;
+        profile-paths = [
+          "~/.local/state/nix/profiles/profile"
+          "/nix/var/nix/profiles/per-user/root/profile"
+        ];
+        keep-since = "1d";
+        keep-latest-n = 1;
+        keep-booted-system = false;
+        keep-current-system = false;
+      };
+    };
+  };
   configOptions = {
     freeformType = toml.type;
     options = {
@@ -47,7 +79,9 @@ let
   };
   commonPolicyOptions = {
     options = {
-      enable = lib.mkEnableOption "this policy";
+      enable = lib.mkEnableOption "this policy" // {
+        default = true;
+      };
     };
   };
   temporaryRootPolicyOptions = {
@@ -175,26 +209,18 @@ let
   validatedConfigFile = pkgs.runCommand "angrr-config.toml" { } ''
     ${lib.getExe cfg.package} validate --config "${originalConfigFile}" > $out
   '';
+
+  configFileMigrationMsg = ''
+    This option is removed since angrr 0.2.0.
+    Please use `services.angrr.config` to configure retention policies through configuration file.
+  '';
 in
 {
   meta.maintainers = pkgs.angrr.meta.maintainers;
   imports = [
-    (lib.mkRemovedOptionModule [ "services" "angrr" "period" ] ''
-      This option is removed since angrr 0.2.0.
-      Please use `services.angrr.config` to configure retention policies through configuration file.
-
-      `services.angrr.period` is replaced by the following two options in configuration file:
-      * `services.angrr.config.temporary-root-policies.result.period`
-      * `services.angrr.config.temporary-root-policies.direnv.period`
-    '')
-    (lib.mkRenamedOptionModule
-      [ "services" "angrr" "removeRoot" ]
-      [ "services" "angrr" "config" "remove-root" ]
-    )
-    (lib.mkRenamedOptionModule
-      [ "services" "angrr" "ownedOnly" ]
-      [ "services" "angrr" "config" "owned-only" ]
-    )
+    (lib.mkRemovedOptionModule [ "services" "angrr" "period" ] configFileMigrationMsg)
+    (lib.mkRemovedOptionModule [ "services" "angrr" "removeRoot" ] configFileMigrationMsg)
+    (lib.mkRemovedOptionModule [ "services" "angrr" "ownedOnly" ] configFileMigrationMsg)
   ];
   options = {
     services.angrr = {
@@ -225,6 +251,7 @@ in
       };
       config = lib.mkOption {
         type = lib.types.submodule configOptions;
+        example = exampleConfig;
         description = ''
           Global configuration for angrr in TOML format.
         '';
@@ -286,34 +313,6 @@ in
       }
 
       {
-        # Provide reasonable default policy configurations to merge with users' config
-        # Users can easily disable them by setting `enable = false` in their config
-        services.angrr.config = {
-          temporary-root-policies = {
-            result = {
-              enable = lib.mkDefault true;
-              path-regex = "/result[^/]*$";
-            };
-          };
-          profile-policies = {
-            system = {
-              enable = lib.mkDefault false;
-              profile-paths = [ "/nix/var/nix/profiles/system" ];
-              keep-booted-system = true;
-              keep-current-system = true;
-            };
-            user = {
-              enable = lib.mkDefault false;
-              profile-paths = [
-                "~/.local/state/nix/profiles/profile"
-                "/nix/var/nix/profiles/per-user/root/profile"
-              ];
-              keep-booted-system = false;
-              keep-current-system = false;
-            };
-          };
-        };
-
         environment.etc."angrr/config.toml".source = cfg.configFile;
 
         systemd.services.angrr = {
@@ -349,10 +348,6 @@ in
       })
 
       (lib.mkIf (config.programs.direnv.enable && direnvCfg.enable) {
-        services.angrr.config.temporary-root-policies.direnv = {
-          enable = lib.mkDefault true;
-          path-regex = "/\\.direnv/";
-        };
         environment.etc."direnv/lib/angrr.sh".source = "${cfg.package}/share/direnv/lib/angrr.sh";
         programs.direnv.direnvrcExtra = lib.mkIf direnvCfg.autoUse ''
           use angrr

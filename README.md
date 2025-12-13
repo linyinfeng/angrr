@@ -28,25 +28,37 @@ A NixOS module example:
 ```nix
 { ... }:
 {
-
   services.angrr = {
     enable = true;
     config = {
       temporary-root-policies = {
-        result = {
-          period = "7d";  # clean result* GC roots older than 7 days
-        };
         direnv = {
-          period = "14d"; # clean direnv GC roots older than 14 days
+          path-regex = "/\\.direnv/";
+          period = "14d";
+        };
+        result = {
+          path-regex = "/result[^/]*$";
+          period = "3d";
         };
       };
       profile-policies = {
         system = {
-          enable = true;     # disabled by default
-          keep-since = "7d"; # keep generations created within the last 7 days
-          keep-latest-n = 2; # keep latest 2 generations
-          # keep-booted-system = true; # keep the currently booted system generation (enabled by default)
-          # keep-current-system = true; # keep the current running system generation (enabled by default)
+          profile-paths = [ "/nix/var/nix/profiles/system" ];
+          keep-since = "14d";
+          keep-latest-n = 5;
+          keep-booted-system = true;
+          keep-current-system = true;
+        };
+        user = {
+          enable = false;
+          profile-paths = [
+            "~/.local/state/nix/profiles/profile"
+            "/nix/var/nix/profiles/per-user/root/profile"
+          ];
+          keep-since = "1d";
+          keep-latest-n = 1;
+          keep-booted-system = false;
+          keep-current-system = false;
         };
       };
     };
