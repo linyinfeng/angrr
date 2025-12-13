@@ -62,7 +62,14 @@ pub enum OwnedOnly {
 impl OwnedOnly {
     pub fn instantiate(&self, current_uid: u32) -> bool {
         match self {
-            OwnedOnly::Auto => current_uid != 0,
+            OwnedOnly::Auto => {
+                let mode = current_uid != 0;
+                match mode {
+                    true => log::info!("running as non-root user, only monitoring owned GC roots"),
+                    false => log::info!("running as root user, monitoring all GC roots"),
+                }
+                mode
+            }
             OwnedOnly::True => true,
             OwnedOnly::False => false,
         }
