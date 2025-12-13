@@ -66,8 +66,15 @@ impl TemporaryRootPolicy {
         Ok(true)
     }
 
-    pub fn expired(&self, root: &GcRoot) -> bool {
-        root.age > self.config.period
+    pub fn expired(&self, root: &GcRoot) -> anyhow::Result<bool> {
+        match self.config.period {
+            Some(period) => Ok(root.age > period),
+            None => anyhow::bail!(
+                "[{}] cannot determine expiration of {:?}, period not set",
+                self.name,
+                root.path,
+            ),
+        }
     }
 }
 

@@ -82,6 +82,9 @@ impl Validate for RunConfig {
                 seen_profiles.insert(cfg.profile_paths.clone());
             }
         }
+        for (name, policy) in &self.temporary_root_policies {
+            policy.validate(name)?;
+        }
         for (name, policy) in &self.profile_policies {
             policy.validate(name)?;
         }
@@ -141,6 +144,7 @@ pub struct TemporaryRootConfig {
     /// A JSON object containing the path information will be passed to the
     /// stdin of the program. If the program exits with code 0, then the
     /// path will be monitored; otherwise it will be ignored.
+    #[serde(default)]
     pub filter: Option<Filter>,
 
     /// Path prefixes to ignore
@@ -153,7 +157,19 @@ pub struct TemporaryRootConfig {
 
     /// Retention period
     #[serde(with = "humantime_serde")]
-    pub period: Duration,
+    #[serde(default)]
+    pub period: Option<Duration>,
+}
+
+impl TemporaryRootConfig {
+    fn validate(&self, name: &str) -> anyhow::Result<()> {
+        if self.common.enable && self.period.is_none() {
+            anyhow::bail!(
+                "invalid temporary root policy {name}: period must be set for the temporary root policy",
+            );
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

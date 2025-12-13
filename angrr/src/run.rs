@@ -157,7 +157,7 @@ impl RunContext {
 
             self.statistic.monitored.increase();
 
-            if policy.expired(gc_root) {
+            if policy.expired(gc_root)? {
                 self.statistic.expired.increase();
                 match self.options.interactive {
                     Interactive::Always => {
