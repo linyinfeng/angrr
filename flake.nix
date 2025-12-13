@@ -82,11 +82,25 @@
               })
 
               (lib.mkIf isDarwin {
+                # test build only
                 system =
                   (inputs.nix-darwin.lib.darwinSystem {
                     modules = [
                       self.darwinModules.angrr
                       {
+                        services.angrr = {
+                          enable = true;
+                          config = {
+                            temporary_root_policies = {
+                              result = {
+                                period = "7d";
+                              };
+                              direnv = {
+                                period = "14d";
+                              };
+                            };
+                          };
+                        };
                         programs.direnv.enable = true;
                         system.stateVersion = 6; # required by nix-darwin
                       }

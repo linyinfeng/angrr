@@ -30,14 +30,28 @@ in
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
       {
+        # provide reasonable default policy configurations
+        services.angrr.config = {
+          temporary_root_policies = {
+            result = {
+              enable = lib.mkDefault true;
+              path_regex = "/result[^/]*$";
+            };
+          };
+          profile_policies = {
+            # TODO currently nothing
+            # I'm not familiar with nix-darwin profiles
+          };
+        };
+
+        environment.etc."angrr/config.toml".source = cfg.configFile;
+
         launchd.daemons.angrr = {
           script = ''
-            ${cfg.package}/bin/angrr run \
+            ${lib.getExe cfg.package} run \
               --log-level "${cfg.logLevel}" \
-              --period "${cfg.period}" \
-              ${lib.optionalString cfg.removeRoot "--remove-root"} \
-              --owned-only="${cfg.ownedOnly}" \
-              --no-prompt ${lib.escapeShellArgs cfg.extraArgs}
+              --no-prompt \
+              ${lib.escapeShellArgs cfg.extraArgs}
           '';
           serviceConfig.RunAtLoad = false;
         };
@@ -50,6 +64,10 @@ in
       })
 
       (lib.mkIf (config.programs.direnv.enable && direnvCfg.enable) {
+        services.angrr.config.temporary_root_policies.direnv = {
+          enable = lib.mkDefault true;
+          path_regex = "/\\.direnv/";
+        };
         environment.etc."direnv/lib/angrr.sh".source = "${cfg.package}/share/direnv/lib/angrr.sh";
         programs.direnv.direnvrcExtra = lib.mkIf direnvCfg.autoUse ''
           use angrr
