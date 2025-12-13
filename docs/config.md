@@ -24,12 +24,12 @@ EXAMPLE_CONFIG_PLACEHOLDER
 
     Only GC roots pointing to store will be monitored.
 
-**owned-only** = `auto`|\<bool\>
+**owned-only** = `"auto"`|`"true"`|`"false"`
 :   Only monitors owned symbolic link target of GC roots.
 
-    - `auto`: behaves like true for normal users, false for root.
-    - `true`: only monitor GC roots owned by the current user.
-    - `false`: monitor all GC roots.
+    - `"auto"`: behaves like true for normal users, false for root.
+    - `"true"`: only monitor GC roots owned by the current user.
+    - `"false"`: monitor all GC roots.
 
 **remove-root** = \<bool\>
 :   Remove GC root in **directory** instead of the symbolic link target of them.
