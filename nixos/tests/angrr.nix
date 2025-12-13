@@ -1,4 +1,7 @@
-{ ... }:
+{ pkgs, ... }:
+let
+  drvForTest = name: pkgs.runCommand "angrr-test-${name}" { } ''echo "${name}" >$out'';
+in
 {
   name = "angrr";
   nodes = {
@@ -12,6 +15,15 @@
             };
             direnv = {
               period = "14d";
+            };
+          };
+          profile_policies = {
+            system = {
+              enable = true; # disabled by default
+              keep_since = "7d";
+              keep_latest_n = 2;
+              # keep_booted_system = true;  # default value
+              # keep_current_system = true; # default value
             };
           };
         };
@@ -29,6 +41,19 @@
       programs.direnv.enable = true;
       # Verbose logging for angrr in direnv
       environment.variables.ANGRR_DIRENV_LOG = "angrr=debug";
+
+      # Add some store paths to machine for test
+      environment.etc."drvs-for-test".text = ''
+        ${drvForTest "drv1"}
+        ${drvForTest "drv2"}
+        ${drvForTest "drv3"}
+        ${drvForTest "drv4"}
+        ${drvForTest "drv5"}
+        ${drvForTest "drv6"}
+        ${drvForTest "drv7"}
+        ${drvForTest "drv8"}
+        ${drvForTest "fake-booted-system"}
+      '';
     };
   };
 
@@ -93,5 +118,40 @@
     machine.succeed("cd /tmp/test-direnv; direnv exec . true")
     machine.systemctl("start nix-gc.service")
     machine.succeed("readlink /tmp/test-direnv/.direnv/gc-root")
+
+    # System profile policy test
+    # Create a profile for test
+    machine.succeed("mkdir /tmp/profile-test")
+    machine.succeed("nix-env --profile /nix/var/nix/profiles/system --set ${drvForTest "drv1"}") # generation 1
+    machine.succeed("nix-env --profile /nix/var/nix/profiles/system --set ${drvForTest "drv2"}") # generation 2
+    machine.succeed("nix-env --profile /nix/var/nix/profiles/system --set ${drvForTest "drv3"}") # generation 3
+    machine.succeed("ln --symbolic --force --no-dereference ${drvForTest "fake-booted-system"} /run/booted-system")
+    machine.succeed("nix-env --profile /nix/var/nix/profiles/system --set /run/booted-system")   # generation 4
+    machine.succeed("nix-env --profile /nix/var/nix/profiles/system --set /run/current-system")  # generation 5
+    machine.succeed("date -s '8 days'")
+    machine.succeed("nix-env --profile /nix/var/nix/profiles/system --set ${drvForTest "drv4"}") # generation 6
+    machine.succeed("nix-env --profile /nix/var/nix/profiles/system --set ${drvForTest "drv5"}") # generation 7
+    machine.succeed("nix-env --profile /nix/var/nix/profiles/system --set ${drvForTest "drv6"}") # generation 8
+    machine.succeed("nix-env --profile /nix/var/nix/profiles/system --set ${drvForTest "drv7"}") # generation 9
+    machine.succeed("nix-env --profile /nix/var/nix/profiles/system --set ${drvForTest "drv8"}") # generation 10
+    # Rollback to generation 2 to simulate current system
+    for _ in range(0, 10 - 2):
+      machine.succeed("nix-env --rollback --profile /nix/var/nix/profiles/system")
+
+    # Run policy
+    machine.systemctl("start nix-gc.service")
+
+    # Test
+    machine.succeed("sh -c 'test $(readlink /nix/var/nix/profiles/system) = system-2-link'")
+    machine.succeed("test ! -e /nix/var/nix/profiles/system-1-link")
+    machine.succeed("readlink  /nix/var/nix/profiles/system-2-link")  # Keep since it is current generation
+    machine.succeed("test ! -e /nix/var/nix/profiles/system-3-link")
+    machine.succeed("readlink  /nix/var/nix/profiles/system-4-link")  # Keep by keep_booted_system
+    machine.succeed("readlink  /nix/var/nix/profiles/system-5-link")  # Keep by keep_current_system
+    machine.succeed("readlink  /nix/var/nix/profiles/system-6-link")  # Keep by keep_since
+    machine.succeed("readlink  /nix/var/nix/profiles/system-7-link")  # Keep by keep_since
+    machine.succeed("readlink  /nix/var/nix/profiles/system-8-link")  # Keep by keep_since
+    machine.succeed("readlink  /nix/var/nix/profiles/system-9-link")  # Keep by keep_latest_n
+    machine.succeed("readlink  /nix/var/nix/profiles/system-10-link") # Keep by keep_latest_n
   '';
 }
