@@ -151,6 +151,24 @@ let
 in
 {
   meta.maintainers = pkgs.angrr.meta.maintainers;
+  imports = [
+    (lib.mkRemovedOptionModule [ "services" "angrr" "period" ] ''
+      This option is removed since angrr 0.2.0.
+      Please use `services.angrr.config` to configure retention policies through configuration file.
+
+      `services.angrr.period` is replaced by the following two options in configuration file:
+      * `services.angrr.config.temporary_root_policies.result.period`
+      * `services.angrr.config.temporary_root_policies.direnv.period`
+    '')
+    (lib.mkRenamedOptionModule
+      [ "services" "angrr" "removeRoot" ]
+      [ "services" "angrr" "config" "remove_root" ]
+    )
+    (lib.mkRenamedOptionModule
+      [ "services" "angrr" "ownedOnly" ]
+      [ "services" "angrr" "config" "owned_only" ]
+    )
+  ];
   options = {
     services.angrr = {
       enable = lib.mkEnableOption "angrr";
