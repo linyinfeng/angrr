@@ -2,11 +2,7 @@ use std::{fs, path::PathBuf};
 
 use anyhow::Context;
 
-use crate::{
-    config::ProfileConfig,
-    profile::{Generation, Profile},
-    utils::format_duration_short,
-};
+use crate::{config::ProfileConfig, profile::Profile, utils::format_duration_short};
 
 #[derive(Clone, Debug)]
 pub struct ProfilePolicy {
@@ -21,7 +17,7 @@ impl ProfilePolicy {
 }
 
 impl ProfilePolicy {
-    pub fn run<'a>(&self, profile: &'a Profile) -> anyhow::Result<Vec<&'a Generation>> {
+    pub fn run(&self, profile: &Profile) -> anyhow::Result<Vec<bool>> {
         let mut keep_generation = vec![false; profile.generations.len()];
 
         // keep current
@@ -97,13 +93,7 @@ impl ProfilePolicy {
             }
         }
 
-        let mut result = Vec::new();
-        for (keep, generation) in keep_generation.into_iter().zip(&profile.generations) {
-            if !keep {
-                result.push(generation);
-            }
-        }
-        Ok(result)
+        Ok(keep_generation)
     }
 
     fn booted_system() -> anyhow::Result<PathBuf> {

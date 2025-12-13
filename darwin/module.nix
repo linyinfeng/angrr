@@ -30,7 +30,7 @@ in
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
       {
-        # provide reasonable default policy configurations
+        # Provide reasonable default policy configurations
         services.angrr.config = {
           temporary_root_policies = {
             result = {
@@ -39,8 +39,17 @@ in
             };
           };
           profile_policies = {
-            # TODO currently nothing
+            # Currently only the user profile
             # I'm not familiar with nix-darwin profiles
+            user = {
+              enable = lib.mkDefault false;
+              profile_paths = [
+                "~/.local/state/nix/profiles/profile"
+                "/nix/var/nix/profiles/per-user/root/profile"
+              ];
+              keep_booted_system = false;
+              keep_current_system = false;
+            };
           };
         };
 

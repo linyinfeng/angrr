@@ -32,8 +32,8 @@ pub struct RunConfig {
     pub store: PathBuf,
 
     /// Only monitors owned symbolic link target of GC roots.
-    #[serde(default = "normal_user")]
-    pub owned_only: bool,
+    #[serde(default)]
+    pub owned_only: OwnedOnly,
 
     /// Remove GC root in `directory` instead of the symbolic link target of them.
     #[serde(default)]
@@ -49,17 +49,36 @@ pub struct RunConfig {
     pub profile_policies: HashMap<String, ProfileConfig>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum OwnedOnly {
+    #[default]
+    Auto,
+    True,
+    False,
+}
+
+impl OwnedOnly {
+    pub fn instantiate(&self, current_uid: u32) -> bool {
+        match self {
+            OwnedOnly::Auto => current_uid != 0,
+            OwnedOnly::True => true,
+            OwnedOnly::False => false,
+        }
+    }
+}
+
 impl Validate for RunConfig {
     fn validate(&self) -> anyhow::Result<()> {
         let mut seen_profiles = HashSet::new();
         for cfg in self.profile_policies.values() {
-            if seen_profiles.contains(&cfg.profile_path) {
+            if seen_profiles.contains(&cfg.profile_paths) {
                 anyhow::bail!(
                     "duplicate profile path in profile policies: {:?}",
-                    cfg.profile_path
+                    cfg.profile_paths
                 );
             } else {
-                seen_profiles.insert(cfg.profile_path.clone());
+                seen_profiles.insert(cfg.profile_paths.clone());
             }
         }
         for (name, policy) in &self.profile_policies {
@@ -141,7 +160,13 @@ pub struct ProfileConfig {
     common: CommonPolicyConfig,
 
     /// Path to the profile
-    pub profile_path: PathBuf,
+    ///
+    /// When `owned_only = true`, if the option begins with `~`,
+    /// it will be expanded to the home directory of the current user.
+    ///
+    /// When `owned_only = false`, if the options begins with `~`,
+    /// it will be expanded to the home of all users discovered respectively.
+    pub profile_paths: Vec<PathBuf>,
 
     /// Retention period
     #[serde(with = "humantime_serde")]
@@ -171,9 +196,15 @@ impl ProfileConfig {
             && let (None, None) = (self.keep_since, self.keep_latest_n)
         {
             anyhow::bail!(
-                "at least one of keep_since and keep_latest_n must be set for profile policy {}",
-                name
+                "invalid profile policy {name}: at least one of keep_since and keep_latest_n must be set for the profile policy",
             );
+        }
+        for path in &self.profile_paths {
+            if !(path.starts_with("~") || path.is_absolute()) {
+                anyhow::bail!(
+                    "invalid profile policy {name}: profile path \"{path:?}\" must be absolute or start with `~`",
+                );
+            }
         }
         Ok(())
     }
@@ -214,12 +245,6 @@ fn default_policy_enable() -> bool {
 
 fn default_temporary_policy_priority_default() -> usize {
     100
-}
-
-/// Returns true if the current user is not root.
-fn normal_user() -> bool {
-    let uid = uzers::get_current_uid();
-    uid != 0
 }
 
 fn default_keep_current_system() -> bool {

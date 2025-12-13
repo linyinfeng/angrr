@@ -1,6 +1,11 @@
 { pkgs, ... }:
 let
-  drvForTest = name: pkgs.runCommand "angrr-test-${name}" { } ''echo "${name}" >$out'';
+  drvForTest =
+    name:
+    pkgs.runCommand "angrr-test-${name}" { } ''
+      mkdir --parents "$out"
+      echo "${name}" >"$out/${name}"
+    '';
 in
 {
   name = "angrr";
@@ -24,6 +29,10 @@ in
               keep_latest_n = 2;
               # keep_booted_system = true;  # default value
               # keep_current_system = true; # default value
+            };
+            user = {
+              enable = true;
+              keep_latest_n = 2;
             };
           };
         };
@@ -153,5 +162,56 @@ in
     machine.succeed("readlink  /nix/var/nix/profiles/system-8-link")  # Keep by keep_since
     machine.succeed("readlink  /nix/var/nix/profiles/system-9-link")  # Keep by keep_latest_n
     machine.succeed("readlink  /nix/var/nix/profiles/system-10-link") # Keep by keep_latest_n
+
+    # User profile policy test 1
+    # Normal user
+    machine.succeed("su normal --command 'nix profile add ${drvForTest "drv1"}'")
+    machine.succeed("su normal --command 'nix profile add ${drvForTest "drv2"}'")
+    machine.succeed("su normal --command 'nix profile add ${drvForTest "drv3"}'")
+    # Root user
+    machine.succeed("nix profile add ${drvForTest "drv1"}")
+    machine.succeed("nix profile add ${drvForTest "drv2"}")
+    machine.succeed("nix profile add ${drvForTest "drv3"}")
+
+    # Run policy
+    machine.systemctl("start nix-gc.service")
+
+    # Test
+    machine.succeed("sh -c 'test $(readlink ~normal/.local/state/nix/profiles/profile) = profile-3-link'")
+    machine.succeed("test ! -e ~normal/.local/state/nix/profiles/profile-1-link")
+    machine.succeed("readlink  ~normal/.local/state/nix/profiles/profile-2-link") # Keep by keep_latest_n
+    machine.succeed("readlink  ~normal/.local/state/nix/profiles/profile-3-link") # Keep since it is current generation
+    machine.succeed("sh -c 'test $(readlink /nix/var/nix/profiles/per-user/root/profile) = profile-3-link'")
+    machine.succeed("test ! -e /nix/var/nix/profiles/per-user/root/profile-1-link")
+    machine.succeed("readlink  /nix/var/nix/profiles/per-user/root/profile-2-link") # Keep by keep_latest_n
+    machine.succeed("readlink  /nix/var/nix/profiles/per-user/root/profile-3-link") # Keep since it is current generation
+
+    # User profile policy test 2
+    # Create GC roots again
+    machine.succeed("su normal --command 'nix profile add ${drvForTest "drv1"}'")
+    machine.succeed("su normal --command 'nix profile add ${drvForTest "drv2"}'")
+    machine.succeed("su normal --command 'nix profile add ${drvForTest "drv3"}'")
+    machine.succeed("nix profile add ${drvForTest "drv1"}")
+    machine.succeed("nix profile add ${drvForTest "drv2"}")
+    machine.succeed("nix profile add ${drvForTest "drv3"}")
+
+    # Run policy in owned_only mode as normal user
+    machine.succeed("su normal --command 'angrr run --no-prompt'")
+
+    # Test
+    machine.succeed("sh -c 'test $(readlink ~normal/.local/state/nix/profiles/profile) = profile-6-link'")
+    machine.succeed("test ! -e ~normal/.local/state/nix/profiles/profile-1-link")
+    machine.succeed("test ! -e ~normal/.local/state/nix/profiles/profile-2-link")
+    machine.succeed("test ! -e ~normal/.local/state/nix/profiles/profile-3-link")
+    machine.succeed("test ! -e ~normal/.local/state/nix/profiles/profile-4-link")
+    machine.succeed("readlink  ~normal/.local/state/nix/profiles/profile-5-link") # Keep by keep_latest_n
+    machine.succeed("readlink  ~normal/.local/state/nix/profiles/profile-6-link") # Keep since it is current generation
+    machine.succeed("sh -c 'test $(readlink /nix/var/nix/profiles/per-user/root/profile) = profile-6-link'")
+    machine.succeed("test ! -e /nix/var/nix/profiles/per-user/root/profile-1-link")
+    machine.succeed("readlink  /nix/var/nix/profiles/per-user/root/profile-2-link")
+    machine.succeed("readlink  /nix/var/nix/profiles/per-user/root/profile-3-link")
+    machine.succeed("readlink  /nix/var/nix/profiles/per-user/root/profile-4-link") # Not monitored
+    machine.succeed("readlink  /nix/var/nix/profiles/per-user/root/profile-5-link") # Not monitored
+    machine.succeed("readlink  /nix/var/nix/profiles/per-user/root/profile-6-link") # Not monitored
   '';
 }

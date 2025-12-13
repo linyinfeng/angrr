@@ -4,8 +4,8 @@
 # store = "/nix/store"
 
 # Only monitor GC roots owned by the current user
-# defaults to true if run as root user, otherwise defaults to normal user
-# owned_only = true/false
+# Defaults to "auto"
+# owned_only = "auto"
 
 # Remove GC root in `directory` instead of the symbolic link target of them.
 # remove_root = false
@@ -27,8 +27,19 @@ period = "7d"
 
 [profile_policies.system]
 enable = false
-profile_path = "/nix/var/nix/profiles/system"
+profile_paths = ["/nix/var/nix/profiles/system"]
 keep_since = "14d"
 keep_latest_n = 3
 keep_booted_system = true
 keep_current_system = true
+
+[profile_policies.user_profile]
+enable = false
+profile_paths = [
+  "~/.local/state/nix/profiles/profile",
+  "/nix/var/nix/profiles/per-user/root/profile",
+]
+keep_since = "0d"
+keep_latest_n = 3
+keep_booted_system = false
+keep_current_system = false

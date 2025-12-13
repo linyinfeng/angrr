@@ -1,10 +1,10 @@
 use anyhow::Context;
 use dialoguer::{Confirm, console::Term};
 use regex::bytes::Regex;
-use std::cmp;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::sync::{Arc, LazyLock};
+use std::{cmp, vec};
 use std::{
     collections::HashMap,
     ffi::OsStr,
@@ -19,7 +19,7 @@ use std::{
 use crate::command::Interactive;
 use crate::policy::profile::ProfilePolicy;
 use crate::profile::{Generation, Profile};
-use crate::utils::{dry_run_indicator, format_duration_short};
+use crate::utils::{self, dry_run_indicator, format_duration_short};
 use crate::{
     command::RunOptions, config::RunConfig, current::Current, gc_root::GcRoot,
     policy::temporary::TemporaryRootPolicy, statistics::Statistics, utils::validate_store_path,
@@ -37,6 +37,7 @@ pub struct RunContext {
 
     current: Current,
     uid: u32,
+    owned_only: bool,
     term: Term,
     output: Mutex<Output>,
     statistic: Statistics,
@@ -44,6 +45,7 @@ pub struct RunContext {
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 enum Action {
+    Keep,
     Remove,
     AboutToRemove,
     Ignored,
@@ -67,6 +69,7 @@ impl RunContext {
         let profile_policies = config.enabled_profile_policies();
         let current = Current::new();
         let uid = uzers::get_current_uid();
+        let owned_only = config.owned_only.instantiate(uid);
         let term = Term::stderr();
         let output = Mutex::new(Output {
             writer: Self::output_writer(&options)?,
@@ -89,6 +92,7 @@ impl RunContext {
             policy_name_max_len,
             current,
             uid,
+            owned_only,
             term,
             output,
             statistic,
@@ -157,16 +161,24 @@ impl RunContext {
                 self.statistic.expired.increase();
                 match self.options.interactive {
                     Interactive::Always => {
-                        self.notify_action(policy_name, gc_root, Action::AboutToRemove)?;
+                        self.notify_action_with_gc_root(
+                            policy_name,
+                            gc_root,
+                            Action::AboutToRemove,
+                        )?;
                         let yes = self.prompt_continue()?;
                         if yes {
                             self.remove(policy_name, gc_root)?;
                         } else {
-                            self.notify_action(policy_name, gc_root, Action::Ignored)?;
+                            self.notify_action(policy_name, Action::Ignored)?;
                         }
                     }
                     Interactive::Once => {
-                        self.notify_action(policy_name, gc_root, Action::AboutToRemove)?;
+                        self.notify_action_with_gc_root(
+                            policy_name,
+                            gc_root,
+                            Action::AboutToRemove,
+                        )?;
                         waiting.push((policy_name.clone(), gc_root.clone()));
                     }
                     Interactive::Never => {
@@ -189,45 +201,92 @@ impl RunContext {
             .map(|root| (&root.path, root.clone()))
             .collect();
         for (policy_name, profile_policy) in &self.profile_policies {
-            let path = &profile_policy.config.profile_path;
-            let profile = self
-                .filter_and_read_profile(path, &gc_roots_lookup_map)
-                .with_context(|| format!("failed to read profile {path:?}"))?;
-            let profile = match profile {
-                Some(p) => p,
-                None => break,
-            };
-            self.statistic.monitored.add(profile.generations.len());
-            let generations = profile_policy.run(&profile)?;
-            self.statistic.expired.add(generations.len());
-            match self.options.interactive {
-                Interactive::Always => {
-                    for g in &generations {
-                        self.notify_action(policy_name, &g.root, Action::AboutToRemove)?;
-                    }
-                    let yes = self.prompt_continue()?;
-                    for g in &generations {
+            let original_path = &profile_policy.config.profile_paths;
+            let expanded: Vec<_> = original_path
+                .iter()
+                .map(|path| self.expand_profile_path(path, gc_roots))
+                .collect::<anyhow::Result<Vec<_>>>()?
+                .iter()
+                .flatten()
+                .cloned()
+                .collect();
+            log::debug!(
+                "[{}] expanded profile paths {:?} to {:?}",
+                policy_name,
+                original_path,
+                expanded,
+            );
+            for path in &expanded {
+                let profile = self
+                    .filter_and_read_profile(path, &gc_roots_lookup_map)
+                    .with_context(|| format!("failed to read profile {path:?}"))?;
+                let profile = match profile {
+                    Some(p) => p,
+                    None => continue,
+                };
+                self.statistic.monitored.add(profile.generations.len());
+                let keep_map = profile_policy.run(&profile)?;
+                self.statistic
+                    .expired
+                    .add(keep_map.iter().map(|keep| if *keep { 0 } else { 1 }).sum());
+                match self.options.interactive {
+                    Interactive::Always => {
+                        for (keep, generation) in keep_map.iter().zip(profile.generations.iter()) {
+                            self.notify_action_with_gc_root(
+                                policy_name,
+                                &generation.root,
+                                if *keep {
+                                    Action::Keep
+                                } else {
+                                    Action::AboutToRemove
+                                },
+                            )?;
+                        }
+                        let yes = self.prompt_continue()?;
                         if yes {
-                            self.remove(policy_name, &g.root)?;
+                            for (keep, generation) in
+                                keep_map.iter().zip(profile.generations.iter())
+                            {
+                                if !keep {
+                                    self.remove(policy_name, &generation.root)?;
+                                }
+                            }
                         } else {
-                            self.notify_action(policy_name, &g.root, Action::Ignored)?;
+                            self.notify_action(policy_name, Action::Ignored)?;
                         }
                     }
-                }
-                Interactive::Once => {
-                    for g in &generations {
-                        self.notify_action(policy_name, &g.root, Action::AboutToRemove)?;
-                        waiting.push((policy_name.clone(), g.root.clone()));
+                    Interactive::Once => {
+                        for (keep, generation) in keep_map.iter().zip(profile.generations.iter()) {
+                            self.notify_action_with_gc_root(
+                                policy_name,
+                                &generation.root,
+                                if *keep {
+                                    Action::Keep
+                                } else {
+                                    Action::AboutToRemove
+                                },
+                            )?;
+                            if !keep {
+                                waiting.push((policy_name.clone(), generation.root.clone()));
+                            }
+                        }
                     }
-                }
-                Interactive::Never => {
-                    for g in &generations {
-                        self.remove(policy_name, &g.root)?;
+                    Interactive::Never => {
+                        for (keep, generation) in keep_map.iter().zip(profile.generations.iter()) {
+                            if !keep {
+                                self.remove(policy_name, &generation.root)?;
+                            } else {
+                                self.notify_action_with_gc_root(
+                                    policy_name,
+                                    &generation.root,
+                                    Action::Keep,
+                                )?;
+                            }
+                        }
                     }
                 }
             }
         }
-
         Ok(())
     }
 
@@ -245,7 +304,7 @@ impl RunContext {
                 log::debug!("target of {link_path:?} not found, skip");
                 return Ok(None);
             }
-            Err(e) if e.kind() == io::ErrorKind::PermissionDenied && self.config.owned_only => {
+            Err(e) if e.kind() == io::ErrorKind::PermissionDenied && self.owned_only => {
                 log::debug!(
                     "ignore profile {target:?} in owned only mode, not owned by the current user"
                 );
@@ -258,7 +317,7 @@ impl RunContext {
         };
 
         // filter with owned_only
-        if self.config.owned_only {
+        if self.owned_only {
             let file_uid = metadata.uid();
             if file_uid != self.uid {
                 log::debug!(
@@ -295,6 +354,32 @@ impl RunContext {
         }))
     }
 
+    fn expand_profile_path<P>(
+        &self,
+        path: P,
+        gc_roots: &[Arc<GcRoot>],
+    ) -> anyhow::Result<Vec<PathBuf>>
+    where
+        P: AsRef<Path>,
+    {
+        let path = path.as_ref();
+        if path.starts_with("~") {
+            if self.owned_only {
+                let home = utils::current_user_home()?;
+                Ok(vec![home.join(path.strip_prefix("~").unwrap())])
+            } else {
+                let users = utils::discover_users(gc_roots)?;
+                let user_homes = utils::user_homes(&users);
+                Ok(user_homes
+                    .into_iter()
+                    .map(|home| home.join(path.strip_prefix("~").unwrap()))
+                    .collect())
+            }
+        } else {
+            Ok(vec![path.to_path_buf()])
+        }
+    }
+
     fn filter_and_read_profile<P>(
         &self,
         path: P,
@@ -310,7 +395,7 @@ impl RunContext {
                 log::info!("ignore profile {path:?}, path not found");
                 return Ok(None);
             }
-            Err(e) if e.kind() == io::ErrorKind::PermissionDenied && self.config.owned_only => {
+            Err(e) if e.kind() == io::ErrorKind::PermissionDenied && self.owned_only => {
                 log::info!(
                     "ignore profile {path:?} in owned only mode, not owned by the current user"
                 );
@@ -323,7 +408,7 @@ impl RunContext {
         };
 
         // filter with owned_only
-        if self.config.owned_only {
+        if self.owned_only {
             let file_uid = metadata.uid();
             if file_uid != self.uid {
                 log::info!(
@@ -391,7 +476,7 @@ impl RunContext {
             .context("failed to prompt")
     }
 
-    fn notify_action(
+    fn notify_action_with_gc_root(
         &self,
         policy_name: &str,
         item: &GcRoot,
@@ -414,8 +499,21 @@ impl RunContext {
         Ok(())
     }
 
+    fn notify_action(&self, policy_name: &str, action: Action) -> anyhow::Result<()> {
+        let mut term = &self.term;
+        writeln!(
+            term,
+            "[{policy_name:name_width$}] {action}{dry_run_indicator}",
+            dry_run_indicator =
+                dry_run_indicator(term, action == Action::Remove && self.options.dry_run),
+            action = action.format_with_style(term),
+            name_width = self.policy_name_max_len,
+        )?;
+        Ok(())
+    }
+
     fn remove(&self, policy_name: &str, root: &GcRoot) -> anyhow::Result<()> {
-        self.notify_action(policy_name, root, Action::Remove)?;
+        self.notify_action_with_gc_root(policy_name, root, Action::Remove)?;
         let path_to_remove = if self.config.remove_root {
             &root.link_path
         } else {
@@ -477,17 +575,20 @@ impl RunContext {
         }
     }
 }
+
 impl Action {
     fn format_with_style(&self, term: &Term) -> String {
+        let text = match self {
+            Action::Keep => "Keep   ",
+            Action::Remove => "Remove ",
+            Action::AboutToRemove => "Remove?",
+            Action::Ignored => "Ignored",
+        };
         match self {
-            Action::Remove => term.style().green().bold().apply_to("Remove").to_string(),
-            Action::AboutToRemove => term
-                .style()
-                .blue()
-                .bold()
-                .apply_to("About to remove")
-                .to_string(),
-            Action::Ignored => term.style().cyan().bold().apply_to("Ignore").to_string(),
+            Action::Keep => term.style().green().bold().apply_to(text).to_string(),
+            Action::Remove => term.style().yellow().bold().apply_to(text).to_string(),
+            Action::AboutToRemove => term.style().blue().bold().apply_to(text).to_string(),
+            Action::Ignored => term.style().cyan().bold().apply_to(text).to_string(),
         }
     }
 }

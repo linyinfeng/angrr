@@ -24,10 +24,12 @@ EXAMPLE_CONFIG_PLACEHOLDER
 
     Only GC roots pointing to store will be monitored.
 
-**owned_only** = \<bool\>
+**owned_only** = `auto`|\<bool\>
 :   Only monitors owned symbolic link target of GC roots.
 
-    If `angrr` is running as non-root user, the option will default to `true`, otherwise, default is `false`.
+    - `auto`: behaves like true for normal users, false for root.
+    - `true`: only monitor GC roots owned by the current user.
+    - `false`: monitor all GC roots.
 
 **remove_root** = \<bool\>
 :   Remove GC root in **directory** instead of the symbolic link target of them.
@@ -107,6 +109,12 @@ See **COMMON POLICY OPTIONS** for common options.
 
 **profile_path** = \<path\>
 :   Path to the profile.
+
+    When `owned_only = true`, if the option begins with `~`,
+    it will be expanded to the home directory of the current user.
+
+    When `owned_only = false`, if the options begins with `~`,
+    it will be expanded to the home of all users discovered respectively.
 
 **keep_since** = \<duration\>
 :   Keep generations created within this duration.

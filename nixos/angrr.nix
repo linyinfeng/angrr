@@ -12,6 +12,23 @@ let
   configOptions = {
     freeformType = toml.type;
     options = {
+      owned_only = lib.mkOption {
+        type =
+          with lib.types;
+          enum [
+            "auto"
+            "true"
+            "false"
+          ];
+        default = "auto";
+        description = ''
+          Only monitors owned symbolic link target of GC roots.
+
+          - "auto": behaves like true for normal users, false for root.
+          - "true": only monitor GC roots owned by the current user.
+          - "false": monitor all GC roots.
+        '';
+      };
       temporary_root_policies = lib.mkOption {
         type = with lib.types; attrsOf (submodule temporaryRootPolicyOptions);
         default = { };
@@ -43,7 +60,8 @@ let
         '';
       };
       period = lib.mkOption {
-        type = lib.types.str;
+        type = with lib.types; nullOr str;
+        default = null;
         description = ''
           Retention period for the GC roots matched by this policy.
         '';
@@ -88,10 +106,16 @@ let
   profilePolicyOptions = {
     imports = [ commonPolicyOptions ];
     options = {
-      profile_path = lib.mkOption {
-        type = lib.types.str;
+      profile_paths = lib.mkOption {
+        type = with lib.types; listOf str;
         description = ''
-          Path to the Nix profile.
+          Paths to the Nix profile.
+
+          When angrr runs in owned_only mode, and the option begins with `~`,
+          it will be expanded to the home directory of the current user.
+
+          When angrr does not run in owned_only mode, and the option begins with `~`,
+          it will be expanded to the home of all users discovered respectively.
         '';
       };
       keep_since = lib.mkOption {
@@ -259,7 +283,8 @@ in
       }
 
       {
-        # provide reasonable default policy configurations
+        # Provide reasonable default policy configurations to merge with users' config
+        # Users can easily disable them by setting `enable = false` in their config
         services.angrr.config = {
           temporary_root_policies = {
             result = {
@@ -270,9 +295,18 @@ in
           profile_policies = {
             system = {
               enable = lib.mkDefault false;
-              profile_path = "/nix/var/nix/profiles/system";
+              profile_paths = [ "/nix/var/nix/profiles/system" ];
               keep_booted_system = true;
               keep_current_system = true;
+            };
+            user = {
+              enable = lib.mkDefault false;
+              profile_paths = [
+                "~/.local/state/nix/profiles/profile"
+                "/nix/var/nix/profiles/per-user/root/profile"
+              ];
+              keep_booted_system = false;
+              keep_current_system = false;
             };
           };
         };

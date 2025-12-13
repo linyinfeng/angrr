@@ -11,6 +11,23 @@ let
   configOptions = {
     freeformType = toml.type;
     options = {
+      owned_only = lib.mkOption {
+        type =
+          with lib.types;
+          enum [
+            "auto"
+            "true"
+            "false"
+          ];
+        default = "auto";
+        description = ''
+          Only monitors owned symbolic link target of GC roots.
+
+          - "auto": behaves like true for normal users, false for root.
+          - "true": only monitor GC roots owned by the current user.
+          - "false": monitor all GC roots.
+        '';
+      };
       temporary_root_policies = lib.mkOption {
         type = with lib.types; attrsOf (submodule temporaryRootPolicyOptions);
         default = { };
@@ -42,7 +59,8 @@ let
         '';
       };
       period = lib.mkOption {
-        type = lib.types.str;
+        type = with lib.types; nullOr str;
+        default = null;
         description = ''
           Retention period for the GC roots matched by this policy.
         '';
@@ -87,10 +105,16 @@ let
   profilePolicyOptions = {
     imports = [ commonPolicyOptions ];
     options = {
-      profile_path = lib.mkOption {
-        type = lib.types.str;
+      profile_paths = lib.mkOption {
+        type = with lib.types; listOf str;
         description = ''
-          Path to the Nix profile.
+          Paths to the Nix profile.
+
+          When `owned_only = true`, if the option begins with `~`,
+          it will be expanded to the home directory of the current user.
+
+          When `owned_only = false`, if the options begins with `~`,
+          it will be expanded to the home of all users discovered respectively.
         '';
       };
       keep_since = lib.mkOption {
