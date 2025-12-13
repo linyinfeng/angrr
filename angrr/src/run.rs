@@ -242,17 +242,19 @@ impl RunContext {
                                 },
                             )?;
                         }
-                        let yes = self.prompt_continue()?;
-                        if yes {
-                            for (keep, generation) in
-                                keep_map.iter().zip(profile.generations.iter())
-                            {
-                                if !keep {
-                                    self.remove(policy_name, &generation.root)?;
+                        if !keep_map.iter().all(|keep| *keep) {
+                            let yes: bool = self.prompt_continue()?;
+                            if yes {
+                                for (keep, generation) in
+                                    keep_map.iter().zip(profile.generations.iter())
+                                {
+                                    if !keep {
+                                        self.remove(policy_name, &generation.root)?;
+                                    }
                                 }
+                            } else {
+                                self.notify_action(policy_name, Action::Ignored)?;
                             }
-                        } else {
-                            self.notify_action(policy_name, Action::Ignored)?;
                         }
                     }
                     Interactive::Once => {
