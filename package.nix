@@ -74,7 +74,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
   };
 
   meta = {
-    description = "Temporary GC Roots Cleaner";
+    description = "Auto Nix GC Root Retention";
     homepage = "https://github.com/linyinfeng/angrr";
     license = [ lib.licenses.mit ];
     maintainers = with lib.maintainers; [ yinfeng ];
