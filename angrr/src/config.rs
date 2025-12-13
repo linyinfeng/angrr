@@ -310,7 +310,11 @@ where
         file_loaded = true;
     }
     if let Some(p) = path {
-        figment = figment.merge(Toml::file(p.as_ref()));
+        let p = p.as_ref();
+        if !p.exists() {
+            anyhow::bail!("configuration file {:?} does not exist", p);
+        }
+        figment = figment.merge(Toml::file(p));
         file_loaded = true;
     }
     if !file_loaded {
