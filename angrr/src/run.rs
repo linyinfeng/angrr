@@ -137,6 +137,9 @@ impl RunContext {
         gc_roots: &[Arc<GcRoot>],
         waiting: &mut Vec<(String, Arc<GcRoot>)>,
     ) -> anyhow::Result<()> {
+        self.notify_policy("Temporary Root Policies", false)?;
+        let mut nothing_expired = true;
+
         let policies = &self.temporary_root_policies;
 
         for gc_root in gc_roots {
@@ -159,6 +162,7 @@ impl RunContext {
 
             if policy.expired(gc_root)? {
                 self.statistic.expired.increase();
+                nothing_expired = false;
                 match self.options.interactive {
                     Interactive::Always => {
                         self.notify_action_with_gc_root(
@@ -186,6 +190,10 @@ impl RunContext {
                     }
                 }
             }
+        }
+
+        if nothing_expired {
+            self.term.write_line("No temporary roots expired.")?;
         }
 
         Ok(())
@@ -224,6 +232,12 @@ impl RunContext {
                     Some(p) => p,
                     None => continue,
                 };
+
+                self.notify_policy(
+                    &format!("Profile Policy [{}]: {:?}", policy_name, path),
+                    true,
+                )?;
+
                 self.statistic.monitored.add(profile.generations.len());
                 let keep_map = profile_policy.run(&profile)?;
                 self.statistic
@@ -394,11 +408,11 @@ impl RunContext {
         let metadata = match fs::symlink_metadata(path) {
             Ok(m) => m,
             Err(e) if e.kind() == io::ErrorKind::NotFound => {
-                log::info!("ignore profile {path:?}, path not found");
+                log::debug!("ignore profile {path:?}, path not found");
                 return Ok(None);
             }
             Err(e) if e.kind() == io::ErrorKind::PermissionDenied && self.owned_only => {
-                log::info!(
+                log::debug!(
                     "ignore profile {path:?} in owned only mode, not owned by the current user"
                 );
                 return Ok(None);
@@ -413,7 +427,7 @@ impl RunContext {
         if self.owned_only {
             let file_uid = metadata.uid();
             if file_uid != self.uid {
-                log::info!(
+                log::debug!(
                     "ignore profile {path:?} in owned only mode, not owned by the current user",
                 );
                 return Ok(None);
@@ -478,6 +492,19 @@ impl RunContext {
             .context("failed to prompt")
     }
 
+    fn notify_policy(&self, description: &str, start_new_line: bool) -> anyhow::Result<()> {
+        let mut term = &self.term;
+        if start_new_line {
+            writeln!(term)?;
+        }
+        writeln!(
+            term,
+            "{}",
+            term.style().bold().underlined().apply_to(description)
+        )?;
+        Ok(())
+    }
+
     fn notify_action_with_gc_root(
         &self,
         policy_name: &str,
@@ -535,7 +562,7 @@ impl RunContext {
         if !self.options.no_statistic {
             writeln!(
                 self.term,
-                "{}",
+                "\n{}",
                 self.term.style().bold().underlined().apply_to("Statistics")
             )?;
             self.term.write_line(

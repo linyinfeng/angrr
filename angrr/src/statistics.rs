@@ -50,6 +50,10 @@ impl Counter {
         self.0.fetch_add(n, Ordering::Relaxed);
     }
 
+    pub fn get(&self) -> usize {
+        self.0.load(Ordering::Relaxed)
+    }
+
     pub fn done(self) -> usize {
         self.0.into_inner()
     }
