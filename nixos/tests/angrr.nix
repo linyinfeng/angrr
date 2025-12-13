@@ -63,6 +63,9 @@ in
         ${drvForTest "drv8"}
         ${drvForTest "fake-booted-system"}
       '';
+
+      # Unit start limit workaround
+      systemd.services.angrr.unitConfig.StartLimitBurst = 10;
     };
   };
 
@@ -94,7 +97,7 @@ in
     machine.succeed("touch /tmp/result-root-auto-gc-root-2 --no-dereference")
     machine.succeed("touch /tmp/result-user-auto-gc-root-2 --no-dereference")
 
-    machine.systemctl("start nix-gc.service")
+    machine.systemctl("start angrr.service")
     # Only GC roots `-1` are removed
     machine.succeed("test ! -e /tmp/result-root-auto-gc-root-1")
     machine.succeed("readlink  /tmp/result-root-auto-gc-root-2")
@@ -103,7 +106,7 @@ in
 
     # Change time again
     machine.succeed("date -s '8 days'")
-    machine.systemctl("start nix-gc.service")
+    machine.systemctl("start angrr.service")
     # All auto GC roots are removed
     machine.succeed("test ! -e /tmp/result-root-auto-gc-root-2")
     machine.succeed("test ! -e /tmp/result-user-auto-gc-root-2")
@@ -116,7 +119,7 @@ in
 
     # The root will be removed if we does not use the direnv recently
     machine.succeed("date -s '15 days'")
-    machine.systemctl("start nix-gc.service")
+    machine.systemctl("start angrr.service")
     machine.succeed("test ! -e /tmp/test-direnv/.direnv/gc-root")
 
     # Recreate the root
@@ -125,7 +128,7 @@ in
     # The root will not be remove if we use the direnv recently
     machine.succeed("date -s '15 days'")
     machine.succeed("cd /tmp/test-direnv; direnv exec . true")
-    machine.systemctl("start nix-gc.service")
+    machine.systemctl("start angrr.service")
     machine.succeed("readlink /tmp/test-direnv/.direnv/gc-root")
 
     # System profile policy test
@@ -148,7 +151,7 @@ in
       machine.succeed("nix-env --rollback --profile /nix/var/nix/profiles/system")
 
     # Run policy
-    machine.systemctl("start nix-gc.service")
+    machine.systemctl("start angrr.service")
 
     # Test
     machine.succeed("sh -c 'test $(readlink /nix/var/nix/profiles/system) = system-2-link'")
@@ -174,7 +177,7 @@ in
     machine.succeed("nix profile add ${drvForTest "drv3"}")
 
     # Run policy
-    machine.systemctl("start nix-gc.service")
+    machine.systemctl("start angrr.service")
 
     # Test
     machine.succeed("sh -c 'test $(readlink ~normal/.local/state/nix/profiles/profile) = profile-3-link'")
