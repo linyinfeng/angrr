@@ -211,7 +211,7 @@ let
   '';
 
   configFileMigrationMsg = ''
-    This option is removed since angrr 0.2.0.
+    This option has been removed since angrr 0.2.0.
     Please use `services.angrr.config` to configure retention policies through configuration file.
   '';
 in
