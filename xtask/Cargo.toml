@@ -10,3 +10,4 @@ clap = { version = "*", features = ["cargo", "derive"] }
 clap_complete = "*"
 clap_mangen = "*"
 anyhow = "*"
+xshell = "*"

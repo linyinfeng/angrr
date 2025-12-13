@@ -6,6 +6,7 @@
   testers,
   nix-update-script,
   clippy,
+  go-md2man,
 }:
 
 let
@@ -28,6 +29,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
         ./Cargo.lock
         ./.cargo
         ./etc
+        ./docs
 
         ./direnv
       ];
@@ -43,7 +45,10 @@ rustPlatform.buildRustPackage (finalAttrs: {
 
   buildAndTestSubdir = "angrr";
 
-  nativeBuildInputs = [ installShellFiles ];
+  nativeBuildInputs = [
+    go-md2man
+    installShellFiles
+  ];
   postBuild = ''
     mkdir --parents build/{man-pages,shell-completions}
     cargo xtask man-pages --out build/man-pages

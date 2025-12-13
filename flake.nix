@@ -104,12 +104,14 @@
                 taplo.enable = true;
                 shellcheck.enable = true;
               };
+              settings.formatter.prettier.excludes = [ "docs/config.md" ];
             };
             devShells.default = pkgs.mkShell {
               inputsFrom = [ self'.packages.angrr ];
               packages = with pkgs; [
                 rustup
                 rust-analyzer
+                go-md2man
               ];
             };
           };
