@@ -199,7 +199,7 @@ impl ProfileConfig {
             && let (None, None) = (self.keep_since, self.keep_latest_n)
         {
             anyhow::bail!(
-                "invalid profile policy {name}: at least one of keep_since and keep_latest_n must be set for the profile policy",
+                "invalid profile policy {name}: at least one of keep-since and keep-latest-n must be set for the profile policy",
             );
         }
         for path in &self.profile_paths {
