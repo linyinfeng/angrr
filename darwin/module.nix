@@ -32,23 +32,23 @@ in
       {
         # Provide reasonable default policy configurations
         services.angrr.config = {
-          temporary_root_policies = {
+          temporary-root-policies = {
             result = {
               enable = lib.mkDefault true;
-              path_regex = "/result[^/]*$";
+              path-regex = "/result[^/]*$";
             };
           };
-          profile_policies = {
+          profile-policies = {
             # Currently only the user profile
             # I'm not familiar with nix-darwin profiles
             user = {
               enable = lib.mkDefault false;
-              profile_paths = [
+              profile-paths = [
                 "~/.local/state/nix/profiles/profile"
                 "/nix/var/nix/profiles/per-user/root/profile"
               ];
-              keep_booted_system = false;
-              keep_current_system = false;
+              keep-booted-system = false;
+              keep-current-system = false;
             };
           };
         };
@@ -73,9 +73,9 @@ in
       })
 
       (lib.mkIf (config.programs.direnv.enable && direnvCfg.enable) {
-        services.angrr.config.temporary_root_policies.direnv = {
+        services.angrr.config.temporary-root-policies.direnv = {
           enable = lib.mkDefault true;
-          path_regex = "/\\.direnv/";
+          path-regex = "/\\.direnv/";
         };
         environment.etc."direnv/lib/angrr.sh".source = "${cfg.package}/share/direnv/lib/angrr.sh";
         programs.direnv.direnvrcExtra = lib.mkIf direnvCfg.autoUse ''

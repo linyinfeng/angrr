@@ -11,7 +11,7 @@ let
   configOptions = {
     freeformType = toml.type;
     options = {
-      owned_only = lib.mkOption {
+      owned-only = lib.mkOption {
         type =
           with lib.types;
           enum [
@@ -28,14 +28,14 @@ let
           - "false": monitor all GC roots.
         '';
       };
-      temporary_root_policies = lib.mkOption {
+      temporary-root-policies = lib.mkOption {
         type = with lib.types; attrsOf (submodule temporaryRootPolicyOptions);
         default = { };
         description = ''
           Policies for temporary GC roots(e.g. result and direnv).
         '';
       };
-      profile_policies = lib.mkOption {
+      profile-policies = lib.mkOption {
         type = with lib.types; attrsOf (submodule profilePolicyOptions);
         default = { };
         description = ''
@@ -52,7 +52,7 @@ let
   temporaryRootPolicyOptions = {
     imports = [ commonPolicyOptions ];
     options = {
-      path_regex = lib.mkOption {
+      path-regex = lib.mkOption {
         type = lib.types.str;
         description = ''
           Regex pattern to match the GC root path.
@@ -82,7 +82,7 @@ let
           External filter program to further filter GC roots matched by this policy.
         '';
       };
-      ignore_prefixes = lib.mkOption {
+      ignore-prefixes = lib.mkOption {
         type = with lib.types; nullOr (listOf str);
         default = null;
         description = ''
@@ -91,7 +91,7 @@ let
           If null is specified, angrr builtin settings will be used.
         '';
       };
-      ignore_prefixes_in_home = lib.mkOption {
+      ignore-prefixes-in-home = lib.mkOption {
         type = with lib.types; nullOr (listOf str);
         default = null;
         description = ''
@@ -105,40 +105,40 @@ let
   profilePolicyOptions = {
     imports = [ commonPolicyOptions ];
     options = {
-      profile_paths = lib.mkOption {
+      profile-paths = lib.mkOption {
         type = with lib.types; listOf str;
         description = ''
           Paths to the Nix profile.
 
-          When `owned_only = true`, if the option begins with `~`,
+          When `owned-only = true`, if the option begins with `~`,
           it will be expanded to the home directory of the current user.
 
-          When `owned_only = false`, if the options begins with `~`,
+          When `owned-only = false`, if the options begins with `~`,
           it will be expanded to the home of all users discovered respectively.
         '';
       };
-      keep_since = lib.mkOption {
+      keep-since = lib.mkOption {
         type = with lib.types; nullOr str;
         default = null;
         description = ''
           Retention period for the GC roots in this profile.
         '';
       };
-      keep_latest_n = lib.mkOption {
+      keep-latest-n = lib.mkOption {
         type = with lib.types; nullOr int;
         default = null;
         description = ''
           Keep the latest N GC roots in this profile.
         '';
       };
-      keep_current_system = lib.mkOption {
+      keep-current-system = lib.mkOption {
         type = lib.types.bool;
         default = true;
         description = ''
           Whether to keep the current system generation. Only useful for system profiles.
         '';
       };
-      keep_booted_system = lib.mkOption {
+      keep-booted-system = lib.mkOption {
         type = lib.types.bool;
         default = true;
         description = ''
@@ -180,16 +180,16 @@ in
       Please use `services.angrr.config` to configure retention policies through configuration file.
 
       `services.angrr.period` is replaced by the following two options in configuration file:
-      * `services.angrr.config.temporary_root_policies.result.period`
-      * `services.angrr.config.temporary_root_policies.direnv.period`
+      * `services.angrr.config.temporary-root-policies.result.period`
+      * `services.angrr.config.temporary-root-policies.direnv.period`
     '')
     (lib.mkRenamedOptionModule
       [ "services" "angrr" "removeRoot" ]
-      [ "services" "angrr" "config" "remove_root" ]
+      [ "services" "angrr" "config" "remove-root" ]
     )
     (lib.mkRenamedOptionModule
       [ "services" "angrr" "ownedOnly" ]
-      [ "services" "angrr" "config" "owned_only" ]
+      [ "services" "angrr" "config" "owned-only" ]
     )
   ];
   options = {

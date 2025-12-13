@@ -5,41 +5,41 @@
 
 # Only monitor GC roots owned by the current user
 # Defaults to "auto"
-# owned_only = "auto"
+# owned-only = "auto"
 
 # Remove GC root in `directory` instead of the symbolic link target of them.
-# remove_root = false
+# remove-root = false
 
 # Directory contains GC roots to monitor.
 # directory = ["/nix/var/nix/gcroots/auto"]
 
-[temporary_root_policies.direnv]
+[temporary-root-policies.direnv]
 enable = true
 priority = 90             # lower priority number takes precedence
-path_regex = '/\.direnv/'
+path-regex = '/\.direnv/'
 period = "14d"
 
-[temporary_root_policies.result]
+[temporary-root-policies.result]
 enable = true
 # priority defaults to 100 if not specified
-path_regex = '/result[^/]*$'
+path-regex = '/result[^/]*$'
 period = "7d"
 
-[profile_policies.system]
+[profile-policies.system]
 enable = false
-profile_paths = ["/nix/var/nix/profiles/system"]
-keep_since = "14d"
-keep_latest_n = 3
-keep_booted_system = true
-keep_current_system = true
+profile-paths = ["/nix/var/nix/profiles/system"]
+keep-since = "14d"
+keep-latest-n = 3
+keep-booted-system = true
+keep-current-system = true
 
-[profile_policies.user_profile]
+[profile-policies.user_profile]
 enable = false
-profile_paths = [
+profile-paths = [
   "~/.local/state/nix/profiles/profile",
   "/nix/var/nix/profiles/per-user/root/profile",
 ]
-keep_since = "0d"
-keep_latest_n = 3
-keep_booted_system = false
-keep_current_system = false
+keep-since = "0d"
+keep-latest-n = 3
+keep-booted-system = false
+keep-current-system = false

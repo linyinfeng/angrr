@@ -14,7 +14,7 @@ in
       services.angrr = {
         enable = true;
         config = {
-          temporary_root_policies = {
+          temporary-root-policies = {
             result = {
               period = "7d";
             };
@@ -22,17 +22,17 @@ in
               period = "14d";
             };
           };
-          profile_policies = {
+          profile-policies = {
             system = {
               enable = true; # disabled by default
-              keep_since = "7d";
-              keep_latest_n = 2;
-              # keep_booted_system = true;  # default value
-              # keep_current_system = true; # default value
+              keep-since = "7d";
+              keep-latest-n = 2;
+              # keep-booted-system = true;  # default value
+              # keep-current-system = true; # default value
             };
             user = {
               enable = true;
-              keep_latest_n = 2;
+              keep-latest-n = 2;
             };
           };
         };
@@ -155,13 +155,13 @@ in
     machine.succeed("test ! -e /nix/var/nix/profiles/system-1-link")
     machine.succeed("readlink  /nix/var/nix/profiles/system-2-link")  # Keep since it is current generation
     machine.succeed("test ! -e /nix/var/nix/profiles/system-3-link")
-    machine.succeed("readlink  /nix/var/nix/profiles/system-4-link")  # Keep by keep_booted_system
-    machine.succeed("readlink  /nix/var/nix/profiles/system-5-link")  # Keep by keep_current_system
-    machine.succeed("readlink  /nix/var/nix/profiles/system-6-link")  # Keep by keep_since
-    machine.succeed("readlink  /nix/var/nix/profiles/system-7-link")  # Keep by keep_since
-    machine.succeed("readlink  /nix/var/nix/profiles/system-8-link")  # Keep by keep_since
-    machine.succeed("readlink  /nix/var/nix/profiles/system-9-link")  # Keep by keep_latest_n
-    machine.succeed("readlink  /nix/var/nix/profiles/system-10-link") # Keep by keep_latest_n
+    machine.succeed("readlink  /nix/var/nix/profiles/system-4-link")  # Keep by keep-booted-system
+    machine.succeed("readlink  /nix/var/nix/profiles/system-5-link")  # Keep by keep-current-system
+    machine.succeed("readlink  /nix/var/nix/profiles/system-6-link")  # Keep by keep-since
+    machine.succeed("readlink  /nix/var/nix/profiles/system-7-link")  # Keep by keep-since
+    machine.succeed("readlink  /nix/var/nix/profiles/system-8-link")  # Keep by keep-since
+    machine.succeed("readlink  /nix/var/nix/profiles/system-9-link")  # Keep by keep-latest-n
+    machine.succeed("readlink  /nix/var/nix/profiles/system-10-link") # Keep by keep-latest-n
 
     # User profile policy test 1
     # Normal user
@@ -179,11 +179,11 @@ in
     # Test
     machine.succeed("sh -c 'test $(readlink ~normal/.local/state/nix/profiles/profile) = profile-3-link'")
     machine.succeed("test ! -e ~normal/.local/state/nix/profiles/profile-1-link")
-    machine.succeed("readlink  ~normal/.local/state/nix/profiles/profile-2-link") # Keep by keep_latest_n
+    machine.succeed("readlink  ~normal/.local/state/nix/profiles/profile-2-link") # Keep by keep-latest-n
     machine.succeed("readlink  ~normal/.local/state/nix/profiles/profile-3-link") # Keep since it is current generation
     machine.succeed("sh -c 'test $(readlink /nix/var/nix/profiles/per-user/root/profile) = profile-3-link'")
     machine.succeed("test ! -e /nix/var/nix/profiles/per-user/root/profile-1-link")
-    machine.succeed("readlink  /nix/var/nix/profiles/per-user/root/profile-2-link") # Keep by keep_latest_n
+    machine.succeed("readlink  /nix/var/nix/profiles/per-user/root/profile-2-link") # Keep by keep-latest-n
     machine.succeed("readlink  /nix/var/nix/profiles/per-user/root/profile-3-link") # Keep since it is current generation
 
     # User profile policy test 2
@@ -195,7 +195,7 @@ in
     machine.succeed("nix profile add ${drvForTest "drv2"}")
     machine.succeed("nix profile add ${drvForTest "drv3"}")
 
-    # Run policy in owned_only mode as normal user
+    # Run policy in owned-only mode as normal user
     machine.succeed("su normal --command 'angrr run --no-prompt'")
 
     # Test
@@ -204,7 +204,7 @@ in
     machine.succeed("test ! -e ~normal/.local/state/nix/profiles/profile-2-link")
     machine.succeed("test ! -e ~normal/.local/state/nix/profiles/profile-3-link")
     machine.succeed("test ! -e ~normal/.local/state/nix/profiles/profile-4-link")
-    machine.succeed("readlink  ~normal/.local/state/nix/profiles/profile-5-link") # Keep by keep_latest_n
+    machine.succeed("readlink  ~normal/.local/state/nix/profiles/profile-5-link") # Keep by keep-latest-n
     machine.succeed("readlink  ~normal/.local/state/nix/profiles/profile-6-link") # Keep since it is current generation
     machine.succeed("sh -c 'test $(readlink /nix/var/nix/profiles/per-user/root/profile) = profile-6-link'")
     machine.succeed("test ! -e /nix/var/nix/profiles/per-user/root/profile-1-link")

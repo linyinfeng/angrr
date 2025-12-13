@@ -24,6 +24,7 @@ pub trait Validate {
 
 /// Main angrr settings structure
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct RunConfig {
     /// Store path for validation
     ///
@@ -50,7 +51,7 @@ pub struct RunConfig {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "kebab-case")]
 pub enum OwnedOnly {
     #[default]
     Auto,
@@ -115,6 +116,7 @@ impl RunConfig {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct TemporaryRootConfig {
     #[serde(flatten)]
     common: CommonPolicyConfig,
@@ -155,6 +157,7 @@ pub struct TemporaryRootConfig {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct ProfileConfig {
     #[serde(flatten)]
     common: CommonPolicyConfig,
@@ -211,6 +214,7 @@ impl ProfileConfig {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct CommonPolicyConfig {
     /// Enable this policy
     #[serde(default = "default_policy_enable")]
@@ -259,6 +263,7 @@ fn default_keep_booted_system() -> bool {
 ///
 /// Must be part of `Config`.
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct TouchConfig {
     #[serde(default = "default_store_path")]
     pub store: PathBuf,

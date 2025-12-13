@@ -8,6 +8,7 @@ use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct Filter {
     pub program: PathBuf,
     #[serde(default)]

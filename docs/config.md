@@ -24,14 +24,14 @@ EXAMPLE_CONFIG_PLACEHOLDER
 
     Only GC roots pointing to store will be monitored.
 
-**owned_only** = `auto`|\<bool\>
+**owned-only** = `auto`|\<bool\>
 :   Only monitors owned symbolic link target of GC roots.
 
     - `auto`: behaves like true for normal users, false for root.
     - `true`: only monitor GC roots owned by the current user.
     - `false`: monitor all GC roots.
 
-**remove_root** = \<bool\>
+**remove-root** = \<bool\>
 :   Remove GC root in **directory** instead of the symbolic link target of them.
 
     Default is `false`.
@@ -41,12 +41,12 @@ EXAMPLE_CONFIG_PLACEHOLDER
 
     Default is `["/nix/var/nix/gcroots/auto"]`.
 
-**temporary_root_policies** = [\<policy1\>, \<policy2\>, ...]
+**temporary-root-policies** = [\<policy1\>, \<policy2\>, ...]
 :   List of temporary root policies.
 
     See **TEMPORARY ROOT POLICY OPTIONS** for details.
 
-**profile_root_policies** = [\<policy1\>, \<policy2\>, ...]
+**profile-policies** = [\<policy1\>, \<policy2\>, ...]
 :   List of temporary root policies.
 
     See **PROFILE POLICY OPTIONS** for details.
@@ -69,7 +69,7 @@ See **COMMON POLICY OPTIONS** for common options.
     order will be applied. That is, a policy named "A" with priority 100
     will have higher priority than a policy named "B" with priority 100.
 
-**path_regex** = \<regex\>
+**path-regex** = \<regex\>
 :   Only paths (absolute) matching the regex will be monitored by this policy.
 
 **filter** = \<filter\>
@@ -82,12 +82,12 @@ See **COMMON POLICY OPTIONS** for common options.
 
     SEE **FILTER OPTIONS** for more information.
 
-**ignore_prefixes** = [\<prefix1\>, \<prefix2\>, ...]
+**ignore-prefixes** = [\<prefix1\>, \<prefix2\>, ...]
 :   A list of path prefixes (absolute) to ignore.
 
     Default is `["/nix/var/nix/profiles"]`.
 
-**ignore_prefix_in_home** = [\<prefix1\>, \<prefix2\>, ...]
+**ignore-prefixes-in-home** = [\<prefix1\>, \<prefix2\>, ...]
 :   A list of path prefixes (relative to home directory) to ignore.
 
     Default is:
@@ -107,27 +107,27 @@ See **COMMON POLICY OPTIONS** for common options.
 
 See **COMMON POLICY OPTIONS** for common options.
 
-**profile_path** = \<path\>
-:   Path to the profile.
+**profile-paths** = [\<path1\>, \<path2\>, ...]
+:   Paths to the profile.
 
-    When `owned_only = true`, if the option begins with `~`,
+    When `owned-only = true`, if the option begins with `~`,
     it will be expanded to the home directory of the current user.
 
-    When `owned_only = false`, if the options begins with `~`,
+    When `owned-only = false`, if the options begins with `~`,
     it will be expanded to the home of all users discovered respectively.
 
-**keep_since** = \<duration\>
+**keep-since** = \<duration\>
 :   Keep generations created within this duration.
 
-**keep_latest_n** = \<number\>
+**keep-latest-n** = \<number\>
 :   Keep the latest \<number\> GC roots in this profile.
 
-**keep_current_system** = \<bool\>
+**keep-current-system** = \<bool\>
 :   Whether to keep the current activated system generation.
 
     Only useful for system profiles. Default is `true`.
 
-**keep_booted_system** = \<bool\>
+**keep-booted-system** = \<bool\>
 :   Whether to keep the currently booted generation.
 
     Only useful for system profiles. Default is `true`.

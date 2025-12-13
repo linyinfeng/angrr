@@ -32,7 +32,7 @@ A NixOS module example:
   services.angrr = {
     enable = true;
     config = {
-      temporary_root_policies = {
+      temporary-root-policies = {
         result = {
           period = "7d";  # clean result* GC roots older than 7 days
         };
@@ -40,13 +40,13 @@ A NixOS module example:
           period = "14d"; # clean direnv GC roots older than 14 days
         };
       };
-      profile_policies = {
+      profile-policies = {
         system = {
           enable = true;     # disabled by default
-          keep_since = "7d"; # keep generations created within the last 7 days
-          keep_latest_n = 2; # keep latest 2 generations
-          # keep_booted_system = true; # keep the currently booted system generation (enabled by default)
-          # keep_current_system = true; # keep the current running system generation (enabled by default)
+          keep-since = "7d"; # keep generations created within the last 7 days
+          keep-latest-n = 2; # keep latest 2 generations
+          # keep-booted-system = true; # keep the currently booted system generation (enabled by default)
+          # keep-current-system = true; # keep the current running system generation (enabled by default)
         };
       };
     };

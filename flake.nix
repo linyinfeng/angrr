@@ -91,7 +91,7 @@
                         services.angrr = {
                           enable = true;
                           config = {
-                            temporary_root_policies = {
+                            temporary-root-policies = {
                               result = {
                                 period = "7d";
                               };

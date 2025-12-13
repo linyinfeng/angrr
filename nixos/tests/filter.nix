@@ -8,14 +8,14 @@
         services.angrr = {
           enable = true;
           config = {
-            temporary_root_policies = {
+            temporary-root-policies = {
               direnv = {
                 period = "0s";
               };
               result = {
                 period = "0s";
-                ignore_prefixes = [ "/tmp/ignore-directory" ];
-                ignore_prefixes_in_home = [ "ignore-directory" ];
+                ignore-prefixes = [ "/tmp/ignore-directory" ];
+                ignore-prefixes-in-home = [ "ignore-directory" ];
                 filter = {
                   program = "jq";
                   arguments = [
