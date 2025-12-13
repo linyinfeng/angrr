@@ -51,6 +51,7 @@ let
     };
   };
   temporaryRootPolicyOptions = {
+    freeformType = toml.type;
     imports = [ commonPolicyOptions ];
     options = {
       path-regex = lib.mkOption {
@@ -104,6 +105,7 @@ let
     };
   };
   profilePolicyOptions = {
+    freeformType = toml.type;
     imports = [ commonPolicyOptions ];
     options = {
       profile-paths = lib.mkOption {
@@ -149,6 +151,7 @@ let
     };
   };
   filterOptions = {
+    freeformType = toml.type;
     options = {
       program = lib.mkOption {
         type = lib.types.str;

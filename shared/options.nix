@@ -50,6 +50,7 @@ let
     };
   };
   temporaryRootPolicyOptions = {
+    freeformType = toml.type;
     imports = [ commonPolicyOptions ];
     options = {
       path-regex = lib.mkOption {
@@ -103,6 +104,7 @@ let
     };
   };
   profilePolicyOptions = {
+    freeformType = toml.type;
     imports = [ commonPolicyOptions ];
     options = {
       profile-paths = lib.mkOption {
@@ -110,10 +112,10 @@ let
         description = ''
           Paths to the Nix profile.
 
-          When `owned-only = true`, if the option begins with `~`,
+          When angrr runs in owned-only mode, and the option begins with `~`,
           it will be expanded to the home directory of the current user.
 
-          When `owned-only = false`, if the options begins with `~`,
+          When angrr does not run in owned-only mode, and the option begins with `~`,
           it will be expanded to the home of all users discovered respectively.
         '';
       };
@@ -148,6 +150,7 @@ let
     };
   };
   filterOptions = {
+    freeformType = toml.type;
     options = {
       program = lib.mkOption {
         type = lib.types.str;
