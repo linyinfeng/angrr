@@ -206,13 +206,13 @@ pub struct ProfileConfig {
     /// Whether to keep the current activated system generation
     ///
     /// Only useful for system profiles.
-    #[serde(default = "default_keep_current_system")]
+    #[serde(default)]
     pub keep_current_system: bool,
 
     /// Whether to keep the currently booted generation
     ///
     /// Only useful for system profiles.
-    #[serde(default = "default_keep_booted_system")]
+    #[serde(default)]
     pub keep_booted_system: bool,
 }
 
@@ -272,14 +272,6 @@ fn default_policy_enable() -> bool {
 
 fn default_temporary_policy_priority_default() -> usize {
     100
-}
-
-fn default_keep_current_system() -> bool {
-    true
-}
-
-fn default_keep_booted_system() -> bool {
-    true
 }
 
 /// Configuration for `touch` command

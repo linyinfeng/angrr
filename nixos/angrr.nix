@@ -170,14 +170,14 @@ let
       };
       keep-current-system = lib.mkOption {
         type = lib.types.bool;
-        default = true;
+        default = false;
         description = ''
           Whether to keep the current system generation. Only useful for system profiles.
         '';
       };
       keep-booted-system = lib.mkOption {
         type = lib.types.bool;
-        default = true;
+        default = false;
         description = ''
           Whether to keep the last booted system generation. Only useful for system profiles.
         '';

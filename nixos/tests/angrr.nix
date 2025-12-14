@@ -29,8 +29,8 @@ in
               profile-paths = [ "/nix/var/nix/profiles/system" ];
               keep-since = "7d"; # do not keep based on time
               keep-latest-n = 2; # keep latest
-              # keep-current-system = true; # default
-              # keep-booted-system = true;  # default
+              keep-current-system = true;
+              keep-booted-system = true;
             };
             user = {
               profile-paths = [
@@ -39,8 +39,6 @@ in
               ];
               # keep-since = "0d"; # do not keep based on time
               keep-latest-n = 2;
-              keep-booted-system = false;
-              keep-current-system = false;
             };
           };
         };

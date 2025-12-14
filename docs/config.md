@@ -125,12 +125,12 @@ See **COMMON POLICY OPTIONS** for common options.
 **keep-current-system** = \<bool\>
 :   Whether to keep the current activated system generation.
 
-    Only useful for system profiles. Default is `true`.
+    Only useful for system profiles. Default is `false`.
 
 **keep-booted-system** = \<bool\>
 :   Whether to keep the currently booted generation.
 
-    Only useful for system profiles. Default is `true`.
+    Only useful for system profiles. Default is `false`.
 
 # FILTER OPTIONS
 
