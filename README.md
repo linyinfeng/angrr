@@ -4,9 +4,13 @@ If you are a heavy user of [nix-direnv](https://github.com/nix-community/nix-dir
 
 This tool deletes such temporary GC roots based on the **modification time** of their symbolic link targets. Combined with the direnv module that automatically touches the GC roots in the direnv layout directory before loading `.envrc`, the tool can precisely remove direnv GC roots that haven't been **accessed** for a long time.
 
-Starting from version `0.2.0`, angrr can also manage profile GC roots (for example, system profile and user Nix profiles) in addition to temporary roots created by direnv or `nix build`. Both temporary root policies and profile policies are **highly configurable**.
+Starting from version `0.2`, angrr can also manage profile GC roots (for example, system profile and user Nix profiles) in addition to temporary roots created by direnv or `nix build`. Both temporary root policies and profile policies are **highly configurable**.
 
-⚠️**Note**: Direnv integration was added in version `0.1.2`, but the version didn’t make it into the `nixos-25.11` channel — currently it’s only available in `nixos-unstable`.
+⚠️**Note**:
+
+1. angrr `0.2` have not been upstreamed to nixpkgs yet, if you need documentation of angrr `0.1.5` (the last version of angrr `0.1`, available in `nixos-unstable`), please refer to [README.md of angrr 0.1.5](https://github.com/linyinfeng/angrr/blob/v0.1.5/README.md).
+
+2. Direnv integration was added in version `0.1.2`, but this version didn’t make it into the `nixos-25.11` channel — currently it’s only available in `nixos-unstable`.
 
 ## Usage
 
@@ -57,8 +61,6 @@ A NixOS module example:
           ];
           keep-since = "1d";
           keep-latest-n = 1;
-          keep-booted-system = false;
-          keep-current-system = false;
         };
       };
     };
