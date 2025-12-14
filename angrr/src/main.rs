@@ -11,43 +11,8 @@ use anyhow::Context;
 use clap::{Parser, crate_name};
 
 fn main() -> anyhow::Result<()> {
-    let crate_name = crate_name!();
-
     let options = Options::parse();
-
-    let mut logger_builder = pretty_env_logger::formatted_builder();
-
-    // default logger configuration
-    let default_log_level = log::LevelFilter::Info;
-    logger_builder.filter_module(crate_name, default_log_level);
-    // overrides
-    if let Ok(filter) = std::env::var("RUST_LOG") {
-        logger_builder.parse_filters(&filter);
-    };
-    // option
-    if options.common.verbose != 0 {
-        let mut iter = log::LevelFilter::iter().fuse();
-        // find the default log level
-        iter.find(|level| *level == default_log_level);
-        for _ in 0..(options.common.verbose - 1) {
-            iter.next();
-        }
-        // since our iter is a Fuse, it must return None if we already reach the max
-        // level
-        let level = match iter.next() {
-            Some(l) => l,
-            None => log::LevelFilter::max(),
-        };
-        logger_builder.filter_module(crate_name, level);
-    }
-    // configuration file
-    if let Some(filter) = options.common.log_level {
-        logger_builder.filter_module(crate_name, filter);
-    }
-    let builder_debug_info = format!("{logger_builder:?}");
-    logger_builder.try_init()?;
-    log::debug!("logger initialized with configuration: {builder_debug_info}");
-
+    setup_logger(&options)?;
     log::debug!("parsed options: {options:#?}");
 
     match options.command {
@@ -82,6 +47,73 @@ fn main() -> anyhow::Result<()> {
                 .flush()
                 .context("failed to flush stdout")?;
         }
+    }
+    Ok(())
+}
+
+fn setup_logger(options: &Options) -> anyhow::Result<()> {
+    let crate_name = crate_name!();
+
+    let mut logger_builder = env_logger::Builder::new();
+
+    // default logger configuration
+    let default_log_level = log::LevelFilter::Info;
+    logger_builder.filter_module(crate_name, default_log_level);
+    // overrides
+    if let Ok(filter) = std::env::var("RUST_LOG") {
+        logger_builder.parse_filters(&filter);
+    };
+    // option
+    if options.common.verbose != 0 {
+        let mut iter = log::LevelFilter::iter().fuse();
+        // find the default log level
+        iter.find(|level| *level == default_log_level);
+        for _ in 0..(options.common.verbose - 1) {
+            iter.next();
+        }
+        // since our iter is a Fuse, it must return None if we already reach the max
+        // level
+        let level = match iter.next() {
+            Some(l) => l,
+            None => log::LevelFilter::max(),
+        };
+        logger_builder.filter_module(crate_name, level);
+    }
+    // configuration file
+    if let Some(filter) = options.common.log_level {
+        logger_builder.filter_module(crate_name, filter);
+    }
+
+    // log style
+    setup_log_style(&mut logger_builder)?;
+
+    let builder_debug_info = format!("{logger_builder:?}");
+    logger_builder.try_init()?;
+
+    log::debug!("logger initialized with configuration: {builder_debug_info}");
+    Ok(())
+}
+
+fn setup_log_style(builder: &mut env_logger::Builder) -> anyhow::Result<()> {
+    // https://github.com/rust-cli/env_logger/blob/main/examples/syslog_friendly_format.rs
+    if let Ok(s) = std::env::var("ANGRR_LOG_STYLE")
+        && s.to_lowercase() == "systemd"
+    {
+        builder.format(|buf, record| {
+            writeln!(
+                buf,
+                "<{}>{}: {}",
+                match record.level() {
+                    log::Level::Error => 3,
+                    log::Level::Warn => 4,
+                    log::Level::Info => 6,
+                    log::Level::Debug => 7,
+                    log::Level::Trace => 7,
+                },
+                record.target(),
+                record.args()
+            )
+        });
     }
     Ok(())
 }

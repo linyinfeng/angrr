@@ -17,7 +17,7 @@ figment = { version = "*", features = ["toml", "env", "json"] }
 toml = "*"
 rust-embed = "*"
 log = { version = "*", features = ["serde"] }
-pretty_env_logger = "*"
+env_logger = "*"
 anyhow = "*"
 humantime = "*"
 humantime-serde = "*"

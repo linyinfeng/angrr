@@ -323,6 +323,7 @@ in
               --no-prompt \
               ${lib.escapeShellArgs cfg.extraArgs}
           '';
+          environment.ANGRR_LOG_STYLE = "systemd";
           serviceConfig = {
             Type = "oneshot";
           };
