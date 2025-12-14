@@ -351,7 +351,7 @@ in
       (lib.mkIf (config.programs.direnv.enable && direnvCfg.enable) {
         environment.etc."direnv/lib/angrr.sh".source = "${cfg.package}/share/direnv/lib/angrr.sh";
         programs.direnv.direnvrcExtra = lib.mkIf direnvCfg.autoUse ''
-          use angrr
+          _angrr_auto_use "$@"
         '';
       })
     ]

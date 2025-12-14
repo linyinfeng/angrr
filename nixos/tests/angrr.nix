@@ -121,21 +121,28 @@ in
     machine.succeed("mkdir /tmp/test-direnv")
     machine.succeed("echo >/tmp/test-direnv/.envrc") # Simply create an empty .envrc
     machine.succeed("nix build /run/current-system --out-link /tmp/test-direnv/.direnv/gc-root")
+    machine.succeed("nix build /run/current-system --out-link /tmp/test-direnv/result")
     machine.succeed("cd /tmp/test-direnv; direnv allow; direnv exec . true")
 
     # The root will be removed if we does not use the direnv recently
     machine.succeed("date -s '15 days'")
     machine.systemctl("start angrr.service")
     machine.succeed("test ! -e /tmp/test-direnv/.direnv/gc-root")
+    machine.succeed("test ! -e /tmp/test-direnv/result")
 
     # Recreate the root
     machine.succeed("nix build /run/current-system --out-link /tmp/test-direnv/.direnv/gc-root")
+    machine.succeed("nix build /run/current-system --out-link /tmp/test-direnv/result")
+    machine.succeed("nix build /run/current-system --out-link /tmp/test-outside-direnv/result")
 
     # The root will not be remove if we use the direnv recently
     machine.succeed("date -s '15 days'")
-    machine.succeed("cd /tmp/test-direnv; direnv exec . true")
+    # test the case that $PWD is different from project root
+    machine.succeed("cd /tmp; direnv exec /tmp/test-direnv true")
     machine.systemctl("start angrr.service")
-    machine.succeed("readlink /tmp/test-direnv/.direnv/gc-root")
+    machine.succeed("readlink  /tmp/test-direnv/.direnv/gc-root")
+    machine.succeed("readlink  /tmp/test-direnv/result")
+    machine.succeed("test ! -e /tmp/test-outside-direnv/result")
 
     # System profile policy test
     # Create a profile for test
