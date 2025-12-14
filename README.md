@@ -1,67 +1,77 @@
-# angrr
+# angrr - Auto Nix GC Root Retention
 
 If you are a heavy user of [nix-direnv](https://github.com/nix-community/nix-direnv), you might find that auto GC roots of projects that haven't been accessed for a long time won't be automatically removed, preventing old store paths from being garbage collected.
 
-This tool deletes auto GC roots based on the **modification time** of their symbolic link targets. Combined with the direnv module that automatically touches the GC roots in the direnv layout directory before loading `.envrc`, the tool can precisely remove direnv GC roots that haven't been **accessed** for a long time.
+This tool deletes such temporary GC roots based on the **modification time** of their symbolic link targets. Combined with the direnv module that automatically touches the GC roots in the direnv layout directory before loading `.envrc`, the tool can precisely remove direnv GC roots that haven't been **accessed** for a long time.
 
-By default, `angrr` monitors paths matching the regex `/\.direnv/|/result.*$`. Use the `--path-regex <REGEX>` option to customize this behavior.
-
-⚠️ **Scope of this tool**: Currently this tool is designed to manage temporary GC roots, such as `result` or direnv-created roots. It is not intended for profile-based GC roots created by tools like `nixos-rebuild`, `home-manager`, `nix profile`, or `nix-env`. See the [discussion in #30](https://github.com/linyinfeng/angrr/issues/30).
+Starting from version `0.2.0`, angrr can also manage profile GC roots (for example, system profile and user Nix profiles) in addition to temporary roots created by direnv or `nix build`. Both temporary root policies and profile policies are **highly configurable**.
 
 ⚠️**Note**: Direnv integration was added in version `0.1.2`, but the version didn’t make it into the `nixos-25.11` channel — currently it’s only available in `nixos-unstable`.
 
 ## Usage
 
-- For non-root users:
+Refer to the man pages or command-line help:
 
-  The following command deletes all monitored GC roots (direnv and `result*` by default) older than 7 days owned by the current user.
+```console
+$ man 1 angrr          # command usage
+$ angrr --help         # command-line help
+$ man 5 angrr          # configuration file format
+$ angrr example-config # extract example configuration file
+```
 
-  ```bash
-  nix run github:linyinfeng/angrr -- run --period 7d
-  ```
+How to test: run with `--dry-run` to see what would be deleted without performing any deletions.
 
-- Manage GC roots for all users as the root user:
-
-  The following command deletes all monitored GC roots (direnv and `result*` by default) older than 7 days owned by all users.
-
-  ```bash
-  sudo nix run github:linyinfeng/angrr -- run --period 7d --owned-only=false
-  ```
-
-  The following command deletes auto GC root links in `/nix/var/nix/gcroots/auto` instead of the symbolic link target of the roots.
-
-  ```bash
-  sudo nix run github:linyinfeng/angrr -- run --period 7d --remove-root
-  ```
-
-Use the `--dry-run` option to test the changes without actually deleting anything.
-See `man angrr` or `angrr --help` for more documentation.
-
-For the syntax of `--period <PERIOD>`, please refer to [the documentation of humantime::parse_duration](https://docs.rs/humantime/latest/humantime/fn.parse_duration.html).
-
-## Flake Usage
-
-An overlay `overlays.default` and a NixOS module `nixosModules.angrr` are provided. Run `nix flake show` to see all available outputs.
+## NixOS Module Usage
 
 A NixOS module example:
 
 ```nix
 { ... }:
 {
-  nix.gc.automatic = true;
   services.angrr = {
     enable = true;
-    period = "2weeks";
-    extraArgs = [
-      ...
-    ];
+    config = {
+      temporary-root-policies = {
+        direnv = {
+          path-regex = "/\\.direnv/";
+          period = "14d";
+        };
+        result = {
+          path-regex = "/result[^/]*$";
+          period = "3d";
+        };
+      };
+      profile-policies = {
+        system = {
+          profile-paths = [ "/nix/var/nix/profiles/system" ];
+          keep-since = "14d";
+          keep-latest-n = 5;
+          keep-booted-system = true;
+          keep-current-system = true;
+        };
+        user = {
+          enable = false;
+          profile-paths = [
+            "~/.local/state/nix/profiles/profile"
+            "/nix/var/nix/profiles/per-user/root/profile"
+          ];
+          keep-since = "1d";
+          keep-latest-n = 1;
+          keep-booted-system = false;
+          keep-current-system = false;
+        };
+      };
+    };
   };
+  nix.gc.automatic = true;
+  programs.direnv.enable = true;
 }
 ```
 
-This configuration automatically triggers angrr before `nix-gc.service` with a retention period of 2 weeks. The `--owned-only=false` option is passed by default so the service manages auto GC roots for all users.
+## Flake Usage
 
-Read [nixos/module.nix](./nixos/module.nix) for more information.
+The tool is available in nixpkgs. But if you want to use the latest version, you can use this flake directly.
+An overlay `overlays.default` and a NixOS module `nixosModules.angrr` are provided. Run `nix flake show` to see all available outputs.
 
 ## Direnv integration
 

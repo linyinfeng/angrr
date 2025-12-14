@@ -13,13 +13,18 @@ default-run = "angrr"
 [dependencies]
 clap = { version = "*", features = ["cargo", "derive"] }
 clap_complete = "*"
-log = "*"
-pretty_env_logger = "*"
+figment = { version = "*", features = ["toml", "env", "json"] }
+toml = "*"
+rust-embed = "*"
+log = { version = "*", features = ["serde"] }
+env_logger = "*"
 anyhow = "*"
 humantime = "*"
+humantime-serde = "*"
 dialoguer = "*"
 uzers = "*"
 nix = { version = "*", features = ["fs"] }
 regex = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
+serde_regex = "*"

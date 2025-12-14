@@ -1,0 +1,45 @@
+# Example configuration for angrr
+
+# Only roots point into the store will be removed
+# store = "/nix/store"
+
+# Only monitor GC roots owned by the current user
+# Defaults to "auto"
+# owned-only = "auto"
+
+# Remove GC root in `directory` instead of the symbolic link target of them.
+# remove-root = false
+
+# Directory contains GC roots to monitor.
+# directory = ["/nix/var/nix/gcroots/auto"]
+
+[temporary-root-policies.direnv]
+enable = true
+priority = 90             # lower priority number takes precedence
+path-regex = '/\.direnv/'
+period = "14d"
+
+[temporary-root-policies.result]
+enable = true
+# priority defaults to 100 if not specified
+path-regex = '/result[^/]*$'
+period = "7d"
+
+[profile-policies.system]
+enable = false
+profile-paths = ["/nix/var/nix/profiles/system"]
+keep-since = "14d"
+keep-latest-n = 3
+keep-booted-system = true
+keep-current-system = true
+
+[profile-policies.user_profile]
+enable = false
+profile-paths = [
+  "~/.local/state/nix/profiles/profile",
+  "/nix/var/nix/profiles/per-user/root/profile",
+]
+keep-since = "0d"
+keep-latest-n = 3
+keep-booted-system = false
+keep-current-system = false

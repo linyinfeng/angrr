@@ -1,2 +1,12 @@
-/// Expose options module for xtask
-pub mod options;
+pub mod command;
+pub mod config;
+pub mod current;
+pub mod embedded;
+pub mod filter;
+pub mod gc_root;
+pub mod policy;
+pub mod profile;
+pub mod run;
+pub mod statistics;
+pub mod touch;
+pub mod utils;

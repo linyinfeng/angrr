@@ -6,6 +6,7 @@
   testers,
   nix-update-script,
   clippy,
+  go-md2man,
 }:
 
 let
@@ -27,6 +28,8 @@ rustPlatform.buildRustPackage (finalAttrs: {
         ./Cargo.toml
         ./Cargo.lock
         ./.cargo
+        ./etc
+        ./docs
 
         ./direnv
       ];
@@ -42,7 +45,10 @@ rustPlatform.buildRustPackage (finalAttrs: {
 
   buildAndTestSubdir = "angrr";
 
-  nativeBuildInputs = [ installShellFiles ];
+  nativeBuildInputs = [
+    go-md2man
+    installShellFiles
+  ];
   postBuild = ''
     mkdir --parents build/{man-pages,shell-completions}
     cargo xtask man-pages --out build/man-pages
@@ -68,7 +74,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
   };
 
   meta = {
-    description = "Temporary GC Roots Cleaner";
+    description = "Auto Nix GC Root Retention";
     homepage = "https://github.com/linyinfeng/angrr";
     license = [ lib.licenses.mit ];
     maintainers = with lib.maintainers; [ yinfeng ];

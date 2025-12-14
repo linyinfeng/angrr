@@ -30,14 +30,14 @@ in
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
       {
+        environment.etc."angrr/config.toml".source = cfg.configFile;
+
         launchd.daemons.angrr = {
           script = ''
-            ${cfg.package}/bin/angrr run \
+            ${lib.getExe cfg.package} run \
               --log-level "${cfg.logLevel}" \
-              --period "${cfg.period}" \
-              ${lib.optionalString cfg.removeRoot "--remove-root"} \
-              --owned-only="${cfg.ownedOnly}" \
-              --no-prompt ${lib.escapeShellArgs cfg.extraArgs}
+              --no-prompt \
+              ${lib.escapeShellArgs cfg.extraArgs}
           '';
           serviceConfig.RunAtLoad = false;
         };

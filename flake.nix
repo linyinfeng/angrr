@@ -66,28 +66,32 @@
               # linux only
               (lib.mkIf isLinux {
                 nixos-test-service = pkgs.testers.runNixOSTest {
-                  imports = [ "${inputs.nixpkgs}/nixos/tests/angrr.nix" ];
+                  imports = [ ./nixos/tests/angrr.nix ];
                   nodes.machine = {
                     imports = [ self.nixosModules.angrr ];
                   };
                   node.pkgs = lib.mkForce (pkgs.extend (self.overlays.default));
                 };
-                nixos-test-upstream-service = pkgs.testers.runNixOSTest {
-                  imports = [ "${inputs.nixpkgs}/nixos/tests/angrr.nix" ];
-                  node.pkgs = lib.mkForce (pkgs.extend (self.overlays.default));
-                };
                 nixos-test-filter = pkgs.testers.runNixOSTest {
                   imports = [ ./nixos/tests/filter.nix ];
+                  nodes.machine = {
+                    imports = [ self.nixosModules.angrr ];
+                  };
                   node.pkgs = lib.mkForce (pkgs.extend (self.overlays.default));
                 };
               })
 
               (lib.mkIf isDarwin {
+                # test build only
                 system =
                   (inputs.nix-darwin.lib.darwinSystem {
                     modules = [
                       self.darwinModules.angrr
                       {
+                        services.angrr = {
+                          enable = true;
+                          config = with builtins; fromTOML (readFile ./etc/example-config.toml);
+                        };
                         programs.direnv.enable = true;
                         system.stateVersion = 6; # required by nix-darwin
                       }
@@ -105,12 +109,14 @@
                 taplo.enable = true;
                 shellcheck.enable = true;
               };
+              settings.formatter.prettier.excludes = [ "docs/config.md" ];
             };
             devShells.default = pkgs.mkShell {
               inputsFrom = [ self'.packages.angrr ];
               packages = with pkgs; [
                 rustup
                 rust-analyzer
+                go-md2man
               ];
             };
           };
