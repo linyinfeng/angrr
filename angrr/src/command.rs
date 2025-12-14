@@ -114,7 +114,7 @@ pub struct TouchOptions {
     #[arg(value_name = "PATH")]
     pub path: PathBuf,
 
-    /// "Do not recurse into directories.
+    /// Do not recurse into directories.
     #[arg(short, long)]
     pub no_recursive: bool,
 
