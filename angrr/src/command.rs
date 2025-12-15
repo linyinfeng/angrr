@@ -114,13 +114,25 @@ pub struct TouchOptions {
     #[arg(value_name = "PATH")]
     pub path: PathBuf,
 
-    /// Do not recurse into directories.
+    /// Project mode
     #[arg(short, long)]
-    pub no_recursive: bool,
+    pub project: bool,
 
-    /// Do not output to stdout.
+    /// Do not recurse into directories.
+    #[arg(short, long, group = "recurse")]
+    pub no_recurse: bool,
+
+    /// Max recurse depth
+    #[arg(long, value_name = "DEPTH", group = "recurse")]
+    pub max_depth: Option<usize>,
+
+    /// Do not output touched paths to stdout.
     #[arg(short, long)]
     pub silent: bool,
+
+    /// Output runtime(in seconds) taken to stdout.
+    #[arg(long)]
+    pub output_runtime: bool,
 
     /// Do not actually touch files.
     #[arg(long)]

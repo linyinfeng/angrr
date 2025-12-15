@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use angrr::config::{RunConfig, load_config};
+use angrr::config::{Config, load_config};
 use angrr::embedded;
 use angrr::{
     command::{Commands, Options},
@@ -28,14 +28,14 @@ fn main() -> anyhow::Result<()> {
             context.finish()?;
         }
         Commands::Validate => {
-            let config: RunConfig = load_config(&options.common.config)?;
+            let config: Config = load_config(&options.common.config)?;
             println!("{}", angrr::config::display_config(&config)?)
         }
         Commands::Touch(touch_opts) => {
             let config = load_config(&options.common.config)?;
             let context = TouchContext::new(touch_opts, config);
             log::trace!("context = {context:#?}");
-            context.touch()?;
+            context.run()?;
         }
         Commands::ExampleConfig => {
             let example = embedded::Etc::get("example-config.toml")

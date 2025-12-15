@@ -2,7 +2,7 @@
 
 If you are a heavy user of [nix-direnv](https://github.com/nix-community/nix-direnv), you might find that auto GC roots of projects that haven't been accessed for a long time won't be automatically removed, preventing old store paths from being garbage collected.
 
-This tool deletes such temporary GC roots based on the **modification time** of their symbolic link targets. Combined with the direnv module that automatically touches the GC roots in the direnv layout directory before loading `.envrc`, the tool can precisely remove direnv GC roots that haven't been **accessed** for a long time.
+This tool deletes such temporary GC roots based on the **modification time** of their symbolic link targets. Combined with the direnv module that automatically touches the GC roots in the project directory before loading `.envrc`, the tool can precisely remove direnv GC roots that haven't been **accessed** for a long time.
 
 Starting from version `0.2`, angrr can also manage profile GC roots (for example, system profile and user Nix profiles) in addition to temporary roots created by direnv or `nix build`. Both temporary root policies and profile policies are **highly configurable**.
 
@@ -62,6 +62,17 @@ A NixOS module example:
           keep-since = "1d";
           keep-latest-n = 1;
         };
+        # ...
+      };
+      touch = {
+        # Direnv integration runs `angrr touch --project $PROJECT_ROOT` automatically.
+        # You can ignore `.git` and some other directories for slightly speedup.
+        project-globs = [
+          "!.git"
+          "!target"
+          "!node_modules"
+          # ...
+        ];
       };
     };
   };

@@ -21,14 +21,14 @@ use crate::policy::profile::ProfilePolicy;
 use crate::profile::{Generation, Profile};
 use crate::utils::{self, dry_run_indicator, format_duration_short};
 use crate::{
-    command::RunOptions, config::RunConfig, current::Current, gc_root::GcRoot,
+    command::RunOptions, config::Config, current::Current, gc_root::GcRoot,
     policy::temporary::TemporaryRootPolicy, statistics::Statistics, utils::validate_store_path,
 };
 
 #[derive(Debug)]
 pub struct RunContext {
     options: RunOptions,
-    config: RunConfig,
+    config: Config,
 
     /// Order of temporary root policies are meaningful
     temporary_root_policies: Vec<(String, TemporaryRootPolicy)>,
@@ -64,7 +64,7 @@ static PROFILE_GENERATION_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(.*)-([0-9]+)-link$").unwrap());
 
 impl RunContext {
-    pub fn new(options: RunOptions, config: RunConfig) -> anyhow::Result<Self> {
+    pub fn new(options: RunOptions, config: Config) -> anyhow::Result<Self> {
         let temporary_root_policies = config.enabled_temporary_root_policies();
         let profile_policies = config.enabled_profile_policies();
         let current = Current::new();

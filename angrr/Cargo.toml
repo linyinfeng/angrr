@@ -26,5 +26,7 @@ uzers = "*"
 nix = { version = "*", features = ["fs"] }
 regex = "*"
 serde = { version = "*", features = ["derive"] }
+serde_default = "*"
 serde_json = "*"
 serde_regex = "*"
+ignore = "*"
