@@ -18,10 +18,7 @@ fn main() -> anyhow::Result<()> {
     match options.command {
         Commands::Run(run_opts) => {
             let config = load_config(&options.common.config)?;
-            log::info!(
-                "loaded config:\n{}",
-                angrr::config::display_config(&config)?
-            );
+            log_loaded_config(&config)?;
             let context = RunContext::new(run_opts, config)?;
             log::trace!("context = {context:#?}");
             context.run()?;
@@ -33,6 +30,7 @@ fn main() -> anyhow::Result<()> {
         }
         Commands::Touch(touch_opts) => {
             let config = load_config(&options.common.config)?;
+            log_loaded_config(&config)?;
             let context = TouchContext::new(touch_opts, config);
             log::trace!("context = {context:#?}");
             context.run()?;
@@ -115,5 +113,10 @@ fn setup_log_style(builder: &mut env_logger::Builder) -> anyhow::Result<()> {
             )
         });
     }
+    Ok(())
+}
+
+fn log_loaded_config(config: &Config) -> anyhow::Result<()> {
+    log::debug!("loaded config:\n{}", angrr::config::display_config(config)?);
     Ok(())
 }
