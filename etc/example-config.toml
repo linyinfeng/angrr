@@ -33,7 +33,7 @@ keep-latest-n = 3
 keep-booted-system = true
 keep-current-system = true
 
-[profile-policies.user_profile]
+[profile-policies.user]
 enable = false
 profile-paths = [
   "~/.local/state/nix/profiles/profile",
@@ -43,3 +43,7 @@ keep-since = "0d"
 keep-latest-n = 3
 keep-booted-system = false
 keep-current-system = false
+
+[touch]
+# ignore `.git` in `angrr touch --project` command
+project-globs = ["!.git"]

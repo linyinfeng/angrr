@@ -51,6 +51,11 @@ EXAMPLE_CONFIG_PLACEHOLDER
 
     See **PROFILE POLICY OPTIONS** for details.
 
+**touch** = \<touch-options\>
+:   Options for `angrr touch` command.
+
+    See **TOUCH OPTIONS** for details.
+
 # COMMMON POLICY OPTIONS
 
 **enable** = \<bool\>
@@ -139,6 +144,20 @@ See **COMMON POLICY OPTIONS** for common options.
 
 **arguments** = [\<arg1\>, \<arg2\>, ...]
 :   Arguments to pass to the external filter program.
+
+# TOUCH OPTIONS
+
+**project-globs** = [\<glob1\>, \<glob2\>, ...]
+:   List of glob patterns to include or exclude files when touching GC roots.
+
+    Only applied when `angrr touch` is invoked with the `--project` flag.
+    Patterns use an inverted gitignore-style semantics (see below).
+
+    Globs provided here have precisely the same semantics as a single line in a gitignore file,
+    where the meaning of `!` is inverted: namely, `!` at the beginning of a glob will ignore a file.
+    Without `!`, all matches of the glob provided are treated as whitelist matches. [1]
+
+    1. https://docs.rs/ignore/latest/ignore/overrides/struct.OverrideBuilder.html#method.add
 
 # DURATION
 

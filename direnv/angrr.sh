@@ -10,10 +10,15 @@ use_angrr() {
         return 1
     fi
     # When loading .envrc, $PWD is the project root
-    log_status "angrr: touch GC roots in $PWD"
-    angrr touch "$PWD" \
-      --log-level "${ANGRR_DIRENV_LOG:-error}" \
-      --silent
+    runtime="$(
+        angrr touch "$PWD" \
+            --project \
+            --log-level "${ANGRR_DIRENV_LOG:-error}" \
+            --output-runtime \
+            --silent
+    )"
+    runtime_formatted=$(printf "%.3f" "$runtime")
+    log_status "angrr: touch GC roots in \"$PWD\" (took ${runtime_formatted}s)"
 }
 
 # direnvrc is loaded in the `__main__` function of direnv stdlib

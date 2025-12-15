@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     fmt::Debug,
     path::{Path, PathBuf},
     time::Duration,
@@ -10,8 +10,10 @@ use figment::{
     Figment,
     providers::{Env, Format, Toml},
 };
+use ignore::overrides::{Override, OverrideBuilder};
 use regex::bytes::Regex;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use serde_default::DefaultFromSerde;
 
 use crate::{
     filter::Filter,
@@ -25,7 +27,7 @@ pub trait Validate {
 /// Main angrr settings structure
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct RunConfig {
+pub struct Config {
     /// Store path for validation
     ///
     /// Only GC roots pointing to store will be monitored.
@@ -48,6 +50,10 @@ pub struct RunConfig {
     pub temporary_root_policies: HashMap<String, TemporaryRootConfig>,
     #[serde(default)]
     pub profile_policies: HashMap<String, ProfileConfig>,
+
+    /// Configuration only useful for `angrr touch` command
+    #[serde(default)]
+    pub touch: TouchConfig,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
@@ -76,17 +82,21 @@ impl OwnedOnly {
     }
 }
 
-impl Validate for RunConfig {
+impl Validate for Config {
     fn validate(&self) -> anyhow::Result<()> {
-        let mut seen_profiles = HashSet::new();
-        for cfg in self.profile_policies.values() {
-            if seen_profiles.contains(&cfg.profile_paths) {
+        let mut seen_profile_paths: HashMap<PathBuf, String> = HashMap::new();
+        for (name, cfg) in &self.profile_policies {
+            if let Some((other, path)) = cfg.profile_paths.iter().find_map(|p| {
+                seen_profile_paths
+                    .get(p)
+                    .map(|other| (other.clone(), p.clone()))
+            }) {
                 anyhow::bail!(
-                    "duplicate profile path in profile policies: {:?}",
-                    cfg.profile_paths
+                    "duplicate profile path {path:?} found in profile policy {other} and {name}",
                 );
             } else {
-                seen_profiles.insert(cfg.profile_paths.clone());
+                seen_profile_paths
+                    .extend(cfg.profile_paths.iter().map(|p| (p.clone(), name.clone())));
             }
         }
         for (name, policy) in &self.temporary_root_policies {
@@ -95,11 +105,12 @@ impl Validate for RunConfig {
         for (name, policy) in &self.profile_policies {
             policy.validate(name)?;
         }
+        self.touch.validate()?;
         Ok(())
     }
 }
 
-impl RunConfig {
+impl Config {
     pub fn enabled_temporary_root_policies(&self) -> Vec<(String, TemporaryRootPolicy)> {
         let mut result: Vec<_> = self
             .temporary_root_policies
@@ -244,6 +255,24 @@ pub struct CommonPolicyConfig {
     pub enable: bool,
 }
 
+#[derive(Clone, Debug, DefaultFromSerde, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct TouchConfig {
+    /// List of glob patterns to include or exclude files when touching GC roots.
+    ///
+    /// Only applied when `angrr touch` is invoked with the `--project` flag.
+    #[serde(default = "default_touch_project_globs")]
+    pub project_globs: Vec<String>,
+}
+
+impl Validate for TouchConfig {
+    fn validate(&self) -> anyhow::Result<()> {
+        // try build override
+        let _ = globs_to_override(".", &self.project_globs)?;
+        Ok(())
+    }
+}
+
 fn default_store_path() -> PathBuf {
     PathBuf::from("/nix/store")
 }
@@ -274,20 +303,8 @@ fn default_temporary_policy_priority_default() -> usize {
     100
 }
 
-/// Configuration for `touch` command
-///
-/// Must be part of `Config`.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct TouchConfig {
-    #[serde(default = "default_store_path")]
-    pub store: PathBuf,
-}
-
-impl Validate for TouchConfig {
-    fn validate(&self) -> anyhow::Result<()> {
-        Ok(())
-    }
+fn default_touch_project_globs() -> Vec<String> {
+    vec!["!.git".to_string()]
 }
 
 pub fn load_config<P, C>(path: &Option<P>) -> anyhow::Result<C>
@@ -324,4 +341,12 @@ pub fn display_config<C: Serialize>(config: &C) -> anyhow::Result<String> {
 pub fn global_config_file() -> Option<PathBuf> {
     let path = PathBuf::from("/etc/angrr/config.toml");
     if path.exists() { Some(path) } else { None }
+}
+
+pub fn globs_to_override<P: AsRef<Path>>(path: P, globs: &[String]) -> anyhow::Result<Override> {
+    let mut builder = OverrideBuilder::new(path.as_ref());
+    for glob in globs {
+        builder.add(glob)?;
+    }
+    Ok(builder.build()?)
 }

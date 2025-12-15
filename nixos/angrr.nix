@@ -40,6 +40,13 @@ let
         keep-current-system = false;
       };
     };
+    touch = {
+      project-globs = [
+        "!.git"
+        "!target"
+        "!node_modules"
+      ];
+    };
   };
   configOptions = {
     freeformType = toml.type;
@@ -74,6 +81,22 @@ let
         description = ''
           Profile GC root policies.
         '';
+      };
+      touch = {
+        project-globs = lib.mkOption {
+          type = with lib.types; listOf str;
+          default = [
+            "!.git"
+          ];
+          description = ''
+            List of glob patterns to include or exclude files when touching GC roots.
+
+            Only applied when `angrr touch` is invoked with the `--project` flag.
+            Patterns use an inverted gitignore-style semantics[1].
+
+            1. <https://docs.rs/ignore/latest/ignore/overrides/struct.OverrideBuilder.html#method.add>
+          '';
+        };
       };
     };
   };

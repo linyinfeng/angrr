@@ -62,6 +62,17 @@ A NixOS module example:
           keep-since = "1d";
           keep-latest-n = 1;
         };
+        # ...
+      };
+      touch = {
+        # Direnv integration runs `angrr touch --project $PROJECT_ROOT` automatically.
+        # You can ignore `.git` and some other directories for slightly speedup.
+        project-globs = [
+          "!.git"
+          "!target"
+          "!node_modules"
+          # ...
+        ];
       };
     };
   };

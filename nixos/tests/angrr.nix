@@ -41,6 +41,11 @@ in
               keep-latest-n = 2;
             };
           };
+          touch = {
+            project-globs = [
+              "!result-glob-ignored"
+            ];
+          };
         };
       };
       # `angrr.service` integrates to `nix-gc.service` by default
@@ -55,7 +60,7 @@ in
       # Test direnv integration
       programs.direnv.enable = true;
       # Verbose logging for angrr in direnv
-      environment.variables.ANGRR_DIRENV_LOG = "angrr=debug";
+      environment.variables.ANGRR_DIRENV_LOG = "debug";
 
       # Add some store paths to machine for test
       environment.etc."drvs-for-test".text = ''
@@ -133,6 +138,7 @@ in
     # Recreate the root
     machine.succeed("nix build /run/current-system --out-link /tmp/test-direnv/.direnv/gc-root")
     machine.succeed("nix build /run/current-system --out-link /tmp/test-direnv/result")
+    machine.succeed("nix build /run/current-system --out-link /tmp/test-direnv/result-glob-ignored")
     machine.succeed("nix build /run/current-system --out-link /tmp/test-outside-direnv/result")
 
     # The root will not be remove if we use the direnv recently
@@ -142,6 +148,7 @@ in
     machine.systemctl("start angrr.service")
     machine.succeed("readlink  /tmp/test-direnv/.direnv/gc-root")
     machine.succeed("readlink  /tmp/test-direnv/result")
+    machine.succeed("test ! -e /tmp/test-direnv/result-glob-ignored")
     machine.succeed("test ! -e /tmp/test-outside-direnv/result")
 
     # System profile policy test
