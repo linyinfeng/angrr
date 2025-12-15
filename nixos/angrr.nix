@@ -236,6 +236,8 @@ let
   configFileMigrationMsg = ''
     This option has been removed since angrr 0.2.0.
     Please use `services.angrr.config` to configure retention policies through configuration file.
+
+    See <https://github.com/linyinfeng/angrr/blob/v0.2.0/README.md#nixos-module-usage> for a configuration example.
   '';
 in
 {
