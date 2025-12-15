@@ -87,14 +87,7 @@ impl TouchContext {
             }
         };
         if metadata.is_symlink() {
-            let target = match fs::read_link(path) {
-                Ok(p) => p,
-                Err(e) => {
-                    log::warn!("ignore {path:?}, failed to read symbolic link: {e}");
-                    return;
-                }
-            };
-            if let Some(_store_path) = validate_store_path(&self.config.store, target) {
+            if let Some(_store_path) = validate_store_path(&self.config.store, path) {
                 // touch
                 if self.options.silent {
                     log::debug!("touch {path:?}");
