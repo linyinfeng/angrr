@@ -85,9 +85,8 @@ let
             List of glob patterns to include or exclude files when touching GC roots.
 
             Only applied when `angrr touch` is invoked with the `--project` flag.
-            Patterns use an inverted gitignore-style semantics[1].
-
-            1. <https://docs.rs/ignore/latest/ignore/overrides/struct.OverrideBuilder.html#method.add>
+            Patterns use an inverted gitignore-style semantics.
+            See <https://docs.rs/ignore/latest/ignore/overrides/struct.OverrideBuilder.html#method.add>.
           '';
         };
       };
@@ -95,8 +94,9 @@ let
   };
   commonPolicyOptions = {
     options = {
-      enable = lib.mkEnableOption "this policy" // {
+      enable = lib.mkEnableOption "this angrr policy" // {
         default = true;
+        example = false;
       };
     };
   };
@@ -277,18 +277,18 @@ in
       configFile = lib.mkOption {
         type = with lib.types; nullOr path;
         default = validatedConfigFile;
-        defaultText = "TOML file generated from `services.angrr.config`";
+        defaultText = "TOML file generated from {option}`services.angrr.config`";
         description = ''
           Path to the angrr configuration file in TOML format.
 
-          If not set, the configuration generated from `services.angrr.config` will be used.
-          If specified, `services.angrr.config` will be ignored.
+          If not set, the configuration generated from {option}`services.angrr.config` will be used.
+          If specified, {option}`services.angrr.config` will be ignored.
         '';
       };
       enableNixGcIntegration = lib.mkOption {
         type = lib.types.bool;
         description = ''
-          Whether to enable nix-gc.service integration
+          Whether to enable nix-gc.service integration.
         '';
       };
       timer = {
