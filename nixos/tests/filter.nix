@@ -7,7 +7,7 @@
       {
         services.angrr = {
           enable = true;
-          config = {
+          settings = {
             temporary-root-policies = {
               direnv = {
                 path-regex = "/\\.direnv/";

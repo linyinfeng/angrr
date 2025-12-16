@@ -9,7 +9,7 @@ let
   cfg = config.services.angrr;
   direnvCfg = config.programs.direnv.angrr;
   toml = pkgs.formats.toml { };
-  exampleConfig = {
+  exampleSettings = {
     temporary-root-policies = {
       direnv = {
         path-regex = "/\\.direnv/";
@@ -41,7 +41,7 @@ let
       };
     };
   };
-  configOptions = {
+  settingsOptions = {
     freeformType = toml.type;
     options = {
       owned-only = lib.mkOption {
@@ -220,15 +220,15 @@ let
   };
 
   # toml.generate does not support null values, we need to filter them out first
-  filteredConfig = lib.filterAttrsRecursive (name: value: value != null) cfg.config;
-  originalConfigFile = toml.generate "angrr.toml" filteredConfig;
+  filteredSettings = lib.filterAttrsRecursive (name: value: value != null) cfg.settings;
+  originalConfigFile = toml.generate "angrr.toml" filteredSettings;
   validatedConfigFile = pkgs.runCommand "angrr-config.toml" { } ''
     ${lib.getExe cfg.package} validate --config "${originalConfigFile}" > $out
   '';
 
   configFileMigrationMsg = ''
     This option has been removed since angrr 0.2.0.
-    Please use `services.angrr.config` to configure retention policies through configuration file.
+    Please use `services.angrr.settings` to configure retention policies through configuration file.
 
     See <https://github.com/linyinfeng/angrr/tree/main?tab=readme-ov-file#nixos-module-usage> for a configuration example.
   '';
@@ -267,9 +267,9 @@ in
           Extra command-line arguments pass to angrr.
         '';
       };
-      config = lib.mkOption {
-        type = lib.types.submodule configOptions;
-        example = exampleConfig;
+      settings = lib.mkOption {
+        type = lib.types.submodule settingsOptions;
+        example = exampleSettings;
         description = ''
           Global configuration for angrr in TOML format.
         '';
@@ -277,12 +277,12 @@ in
       configFile = lib.mkOption {
         type = with lib.types; nullOr path;
         default = validatedConfigFile;
-        defaultText = "TOML file generated from {option}`services.angrr.config`";
+        defaultText = "TOML file generated from {option}`services.angrr.settings`";
         description = ''
           Path to the angrr configuration file in TOML format.
 
-          If not set, the configuration generated from {option}`services.angrr.config` will be used.
-          If specified, {option}`services.angrr.config` will be ignored.
+          If not set, the configuration generated from {option}`services.angrr.settings` will be used.
+          If specified, {option}`services.angrr.settings` will be ignored.
         '';
       };
       enableNixGcIntegration = lib.mkOption {

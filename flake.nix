@@ -90,7 +90,7 @@
                       {
                         services.angrr = {
                           enable = true;
-                          config = with builtins; fromTOML (readFile ./etc/example-config.toml);
+                          settings = with builtins; fromTOML (readFile ./etc/example-config.toml);
                         };
                         programs.direnv.enable = true;
                         system.stateVersion = 6; # required by nix-darwin

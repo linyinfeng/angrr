@@ -13,7 +13,7 @@ in
     machine = {
       services.angrr = {
         enable = true;
-        config = {
+        settings = {
           temporary-root-policies = {
             result = {
               path-regex = "/result[^/]*$";

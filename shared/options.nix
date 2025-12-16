@@ -8,7 +8,7 @@
 let
   cfg = config.services.angrr;
   toml = pkgs.formats.toml { };
-  exampleConfig = {
+  exampleSettings = {
     temporary-root-policies = {
       direnv = {
         path-regex = "/\\.direnv/";
@@ -40,7 +40,7 @@ let
       };
     };
   };
-  configOptions = {
+  settingsOptions = {
     freeformType = toml.type;
     options = {
       owned-only = lib.mkOption {
@@ -84,9 +84,8 @@ let
             List of glob patterns to include or exclude files when touching GC roots.
 
             Only applied when `angrr touch` is invoked with the `--project` flag.
-            Patterns use an inverted gitignore-style semantics[1].
-
-            1. <https://docs.rs/ignore/latest/ignore/overrides/struct.OverrideBuilder.html#method.add>
+            Patterns use an inverted gitignore-style semantics.
+            See <https://docs.rs/ignore/latest/ignore/overrides/struct.OverrideBuilder.html#method.add>.
           '';
         };
       };
@@ -94,8 +93,9 @@ let
   };
   commonPolicyOptions = {
     options = {
-      enable = lib.mkEnableOption "this policy" // {
+      enable = lib.mkEnableOption "this angrr policy" // {
         default = true;
+        example = false;
       };
     };
   };
@@ -219,15 +219,15 @@ let
   };
 
   # toml.generate does not support null values, we need to filter them out first
-  filteredConfig = lib.filterAttrsRecursive (name: value: value != null) cfg.config;
-  originalConfigFile = toml.generate "angrr.toml" filteredConfig;
+  filteredSettings = lib.filterAttrsRecursive (name: value: value != null) cfg.settings;
+  originalConfigFile = toml.generate "angrr.toml" filteredSettings;
   validatedConfigFile = pkgs.runCommand "angrr-config.toml" { } ''
     ${lib.getExe cfg.package} validate --config "${originalConfigFile}" > $out
   '';
 
   configFileMigrationMsg = ''
     This option has been removed since angrr 0.2.0.
-    Please use `services.angrr.config` to configure retention policies through configuration file.
+    Please use `services.angrr.settings` to configure retention policies through configuration file.
 
     See <https://github.com/linyinfeng/angrr/tree/main?tab=readme-ov-file#nixos-module-usage> for a configuration example.
   '';
@@ -266,9 +266,9 @@ in
           Extra command-line arguments pass to angrr.
         '';
       };
-      config = lib.mkOption {
-        type = lib.types.submodule configOptions;
-        example = exampleConfig;
+      settings = lib.mkOption {
+        type = lib.types.submodule settingsOptions;
+        example = exampleSettings;
         description = ''
           Global configuration for angrr in TOML format.
         '';
@@ -276,12 +276,12 @@ in
       configFile = lib.mkOption {
         type = with lib.types; nullOr path;
         default = validatedConfigFile;
-        defaultText = "TOML file generated from `services.angrr.config`";
+        defaultText = "TOML file generated from {option}`services.angrr.settings`";
         description = ''
           Path to the angrr configuration file in TOML format.
 
-          If not set, the configuration generated from `services.angrr.config` will be used.
-          If specified, `services.angrr.config` will be ignored.
+          If not set, the configuration generated from {option}`services.angrr.settings` will be used.
+          If specified, {option}`services.angrr.settings` will be ignored.
         '';
       };
     };
