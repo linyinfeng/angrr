@@ -74,6 +74,22 @@ let
           Profile GC root policies.
         '';
       };
+      touch = {
+        project-globs = lib.mkOption {
+          type = with lib.types; listOf str;
+          default = [
+            "!.git"
+          ];
+          description = ''
+            List of glob patterns to include or exclude files when touching GC roots.
+
+            Only applied when `angrr touch` is invoked with the `--project` flag.
+            Patterns use an inverted gitignore-style semantics[1].
+
+            1. <https://docs.rs/ignore/latest/ignore/overrides/struct.OverrideBuilder.html#method.add>
+          '';
+        };
+      };
     };
   };
   commonPolicyOptions = {
@@ -169,14 +185,14 @@ let
       };
       keep-current-system = lib.mkOption {
         type = lib.types.bool;
-        default = true;
+        default = false;
         description = ''
           Whether to keep the current system generation. Only useful for system profiles.
         '';
       };
       keep-booted-system = lib.mkOption {
         type = lib.types.bool;
-        default = true;
+        default = false;
         description = ''
           Whether to keep the last booted system generation. Only useful for system profiles.
         '';
@@ -212,6 +228,8 @@ let
   configFileMigrationMsg = ''
     This option has been removed since angrr 0.2.0.
     Please use `services.angrr.config` to configure retention policies through configuration file.
+
+    See <https://github.com/linyinfeng/angrr/tree/main?tab=readme-ov-file#nixos-module-usage> for a configuration example.
   '';
 in
 {

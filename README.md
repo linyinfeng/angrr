@@ -2,9 +2,14 @@
 
 If you are a heavy user of [nix-direnv](https://github.com/nix-community/nix-direnv), you might find that auto GC roots of projects that haven't been accessed for a long time won't be automatically removed, preventing old store paths from being garbage collected.
 
-This tool deletes such temporary GC roots based on the **modification time** of their symbolic link targets. Combined with the direnv module that automatically touches the GC roots in the project directory before loading `.envrc`, the tool can precisely remove direnv GC roots that haven't been **accessed** for a long time.
+This tool helps clean up old Nix GC roots based on configurable policies.
 
-Starting from version `0.2`, angrr can also manage profile GC roots (for example, system profile and user Nix profiles) in addition to temporary roots created by direnv or `nix build`. Both temporary root policies and profile policies are **highly configurable**.
+**Features**:
+
+1. Clean profile generations (system, nix-darwin, nix-env, nix profile, home-manager, ...)
+2. Clean temporary roots (nix-direnv/nix-build/nix build, ...)
+3. **Highly configurable** policies
+4. **Set and forget**
 
 ⚠️**Note**:
 
@@ -44,6 +49,8 @@ A NixOS module example:
           path-regex = "/result[^/]*$";
           period = "3d";
         };
+        # You can define your own policies
+        # ...
       };
       profile-policies = {
         system = {
@@ -54,28 +61,21 @@ A NixOS module example:
           keep-current-system = true;
         };
         user = {
-          enable = false;
+          enable = false; # Policies can be individually disabled
           profile-paths = [
+            # `~` at the beginning will be expanded to the home directory of each discovered user
             "~/.local/state/nix/profiles/profile"
             "/nix/var/nix/profiles/per-user/root/profile"
           ];
           keep-since = "1d";
           keep-latest-n = 1;
         };
+        # You can define your own policies
         # ...
-      };
-      touch = {
-        # Direnv integration runs `angrr touch --project $PROJECT_ROOT` automatically.
-        # You can ignore `.git` and some other directories for slightly speedup.
-        project-globs = [
-          "!.git"
-          "!target"
-          "!node_modules"
-          # ...
-        ];
       };
     };
   };
+  # angrr.service runs before nix-gc.service by default
   nix.gc.automatic = true;
   programs.direnv.enable = true;
 }
@@ -88,27 +88,37 @@ An overlay `overlays.default` and a NixOS module `nixosModules.angrr` are provid
 
 ## Direnv integration
 
-Some direnv environments upgrade very rarely. GC roots of such environments will be deleted and recreated frequently even when you are actively using them, since the tool deletes auto GC roots based on the modification time of their symbolic link targets.
-
-The `angrr touch` command recursively updates the modification time of every symlink to the Nix store in the given directory.
+The `angrr touch` command recursively updates the modification time of every symlink to the Nix store in the given directory. So that these paths are retained by angrr or any other Nix GC root retention tools.
 
 ```console
-$  angrr touch .direnv
-Touch ".direnv/flake-profile-a5d5b61aa8a61b7d9d765e1daf971a9a578f1cfa"
-Touch ".direnv/flake-inputs/8n2y13ilw5vdc058bxsd0xn7bzjpp6m3-source"
+$  angrr touch .
+Touch "./.direnv/flake-profile-a5d5b61aa8a61b7d9d765e1daf971a9a578f1cfa"
+Touch "./.direnv/flake-inputs/8n2y13ilw5vdc058bxsd0xn7bzjpp6m3-source"
+...
+Touch "./result"
 ...
 ```
 
-A direnv library is provided to easily integrate `angrr touch` with direnv. By default, if you enable the NixOS module with both `services.angrr.enable = true` and `programs.direnv.enable = true`, `angrr touch` automatically runs for the direnv layout directory before loading `.envrc`.
+A direnv library is provided to easily integrate `angrr touch` with direnv. By default, if you enable the NixOS module with both `services.angrr.enable = true` and `programs.direnv.enable = true`, `angrr touch --project` automatically runs for the **project root** before loading `.envrc`.
 
 ```console
 $ direnv allow
 direnv: using angrr
-direnv: angrr: touch GC roots /home/yinfeng/Source/angrr/.direnv
+direnv: angrr: touch GC roots in "/home/yinfeng/Source/angrr" (took 0.017s)
 direnv: loading ~/Source/angrr/.envrc
 direnv: using flake
 direnv: nix-direnv: Renewed cache
 ...
 ```
 
-You can disable this behavior by setting `programs.direnv.angrr.autoUse = false`. You can still manually add `use angrr` to your `.envrc` to explicitly trigger `angrr touch`. To disable direnv integration completely, set `programs.direnv.angrr.enable = false`.
+You can customize the behavior of `angrr touch --project` in configuration file. By default, `angrr touch --project` ignores `.git` to slightly speed up the touch process. You can modify the `touch.project-globs` list to include or exclude other directories as needed. For example, if you do not want `result`s directories under project root to be touched, you can add `!result*` to the list.
+
+You can completely disable the auto touch behavior by setting `programs.direnv.angrr.autoUse = false`. You can still manually add `use angrr` to your `.envrc` to explicitly trigger `angrr touch`. To disable direnv integration completely, set `programs.direnv.angrr.enable = false`.
+
+### Compare to nix-direnv's refresh functionality
+
+After <https://github.com/nix-community/nix-direnv/pull/631>, nix-direnv also adds its own refresh functionality.
+
+Compared to nix-direnv, angrr touches GC roots under the project root, while nix-direnv touches GC roots under the `direnv_layout_dir`(most of the time, `.direnv` in project root).
+
+Nix-direnv's refresh functionality is enough for most use cases. But angrr's may also cover some very special use cases, so I still provide it.

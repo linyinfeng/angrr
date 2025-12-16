@@ -40,13 +40,6 @@ let
         keep-current-system = false;
       };
     };
-    touch = {
-      project-globs = [
-        "!.git"
-        "!target"
-        "!node_modules"
-      ];
-    };
   };
   configOptions = {
     freeformType = toml.type;
@@ -237,7 +230,7 @@ let
     This option has been removed since angrr 0.2.0.
     Please use `services.angrr.config` to configure retention policies through configuration file.
 
-    See <https://github.com/linyinfeng/angrr/blob/v0.2.0/README.md#nixos-module-usage> for a configuration example.
+    See <https://github.com/linyinfeng/angrr/tree/main?tab=readme-ov-file#nixos-module-usage> for a configuration example.
   '';
 in
 {
