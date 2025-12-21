@@ -270,6 +270,7 @@ in
       settings = lib.mkOption {
         type = lib.types.submodule settingsOptions;
         example = exampleSettings;
+        default = { };
         description = ''
           Global configuration for angrr in TOML format.
         '';
