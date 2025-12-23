@@ -17,7 +17,7 @@ use_angrr() {
             --output-runtime \
             --silent
     )"
-    runtime_formatted=$(printf "%.3f" "$runtime")
+    runtime_formatted=$(LC_ALL=C printf "%.3f" "$runtime")
     log_status "angrr: touch GC roots in \"$PWD\" (took ${runtime_formatted}s)"
 }
 
