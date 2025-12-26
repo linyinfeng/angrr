@@ -3,7 +3,7 @@ resolver = "3"
 members = ["angrr", "xtask"]
 
 [workspace.package]
-version = "0.2.0"
+version = "0.2.2"
 edition = "2024"
 license = "MIT"
 authors = ["Lin Yinfeng <lin.yinfeng@outlook.com>"]
