@@ -98,19 +98,27 @@ fn setup_log_style(builder: &mut env_logger::Builder) -> anyhow::Result<()> {
         && s.to_lowercase() == "systemd"
     {
         builder.format(|buf, record| {
+            let level = match record.level() {
+                log::Level::Error => 3,
+                log::Level::Warn => 4,
+                log::Level::Info => 6,
+                log::Level::Debug => 7,
+                log::Level::Trace => 7,
+            };
+            let body = format!("{}", record.args());
+            let mut body_lines = body.lines();
+            let body_first_line = body_lines.next();
+            let body_with_level = body_lines.map(|line| format!("<{level}>{}", line));
             writeln!(
                 buf,
-                "<{}>{}: {}",
-                match record.level() {
-                    log::Level::Error => 3,
-                    log::Level::Warn => 4,
-                    log::Level::Info => 6,
-                    log::Level::Debug => 7,
-                    log::Level::Trace => 7,
-                },
+                "<{level}>{}: {}",
                 record.target(),
-                record.args()
-            )
+                body_first_line.unwrap_or_default()
+            )?;
+            for line in body_with_level {
+                writeln!(buf, "{}", line)?;
+            }
+            Ok(())
         });
     }
     Ok(())
