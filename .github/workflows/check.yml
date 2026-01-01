@@ -3,6 +3,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - "v*"
   pull_request:
     branches:
       - main
@@ -35,3 +37,30 @@ jobs:
           signingKey: "${{ secrets.CACHIX_SIGNING_KEY }}"
       - name: Nix flake check
         run: nix flake check --print-build-logs
+
+  version:
+    needs: [check]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+      - name: Install nix
+        uses: cachix/install-nix-action@master
+        with:
+          github_access_token: "${{ secrets.GITHUB_TOKEN }}"
+      - name: Setup cachix
+        uses: cachix/cachix-action@master
+        with:
+          name: linyinfeng
+          signingKey: "${{ secrets.CACHIX_SIGNING_KEY }}"
+      - name: Check version
+        run: |
+          tag_version="${GITHUB_REF#refs/tags/v}"
+          binary_version="$(nix run .#angrr -- --version | cut --delimiter=' ' --fields=2)"
+          echo "binary version = $binary_version"
+          echo "tag    version = $tag_version"
+          if [ "$binary_version" != "$tag_version" ]; then
+            echo "Version mismatch"
+            exit 1
+          fi
