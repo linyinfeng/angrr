@@ -13,9 +13,7 @@ This tool helps clean up old Nix GC roots based on configurable policies.
 
 ⚠️**Note**:
 
-1. angrr `0.2` have not been upstreamed to nixpkgs yet, if you need documentation of angrr `0.1.5` (the last version of angrr `0.1`, available in `nixos-unstable`), please refer to [README.md of angrr 0.1.5](https://github.com/linyinfeng/angrr/blob/v0.1.5/README.md).
-
-2. Direnv integration was added in version `0.1.2`, but this version didn’t make it into the `nixos-25.11` channel — currently it’s only available in `nixos-unstable`.
+The version in the stable `nixos-25.11` channel is outdated (`v0.1.1`) and lacks some features, such as profile generation cleaning. If you need that version, refer to the [v0.1.1 README](https://github.com/linyinfeng/angrr/tree/v0.1.1).
 
 ## Usage
 
