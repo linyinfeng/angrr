@@ -236,7 +236,6 @@ in
 {
   meta.maintainers = pkgs.angrr.meta.maintainers;
   imports = [
-    (lib.mkRemovedOptionModule [ "services" "angrr" "period" ] configFileMigrationMsg)
     (lib.mkRemovedOptionModule [ "services" "angrr" "removeRoot" ] configFileMigrationMsg)
     (lib.mkRemovedOptionModule [ "services" "angrr" "ownedOnly" ] configFileMigrationMsg)
   ];
@@ -265,6 +264,15 @@ in
         default = [ ];
         description = ''
           Extra command-line arguments pass to angrr.
+        '';
+      };
+      period = lib.mkOption {
+        type = with lib.types; nullOr str;
+        default = null;
+        description = ''
+          If set, it configures {option}`services.angrr.settings` to a preset that
+          monitor .direnv, results, system, and user profiles,
+          retaining GC roots that are younger than the specified period.
         '';
       };
       settings = lib.mkOption {
@@ -371,6 +379,38 @@ in
         programs.direnv.direnvrcExtra = lib.mkIf direnvCfg.autoUse ''
           _angrr_auto_use "$@"
         '';
+      })
+
+      # When period is set, configure a preset retention policy
+      # Users can still override settings via services.angrr.settings
+      (lib.mkIf (cfg.period != null) {
+        services.angrr.settings = {
+          temporary-root-policies = {
+            direnv = {
+              path-regex = "/\\.direnv/";
+              period = cfg.period;
+            };
+            result = {
+              path-regex = "/result[^/]*$";
+              period = cfg.period;
+            };
+          };
+          profile-policies = {
+            system = {
+              profile-paths = [ "/nix/var/nix/profiles/system" ];
+              keep-since = cfg.period;
+              keep-booted-system = true;
+              keep-current-system = true;
+            };
+            user = {
+              profile-paths = [
+                "~/.local/state/nix/profiles/profile"
+                "/nix/var/nix/profiles/per-user/root/profile"
+              ];
+              keep-since = cfg.period;
+            };
+          };
+        };
       })
     ]
   );
