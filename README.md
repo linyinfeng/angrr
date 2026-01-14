@@ -30,7 +30,22 @@ How to test: run with `--dry-run` to see what would be deleted without performin
 
 ## NixOS Module Usage
 
-A NixOS module example:
+If you just want a simple setup, enable the NixOS module with preset settings:
+
+```nix
+{ ... }:
+{
+  services.angrr = {
+    enable = true;
+    period = "7d";
+  };
+  # angrr.service runs before nix-gc.service by default
+  nix.gc.automatic = true;
+  programs.direnv.enable = true;
+}
+```
+
+Or you can define your own policies in the `services.angrr.settings` option:
 
 ```nix
 { ... }:

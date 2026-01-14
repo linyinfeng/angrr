@@ -64,22 +64,24 @@
               { inherit (self'.packages) angrr; }
 
               # linux only
-              (lib.mkIf isLinux {
-                nixos-test-service = pkgs.testers.runNixOSTest {
-                  imports = [ ./nixos/tests/angrr.nix ];
-                  nodes.machine = {
-                    imports = [ self.nixosModules.angrr ];
-                  };
-                  node.pkgs = lib.mkForce (pkgs.extend (self.overlays.default));
-                };
-                nixos-test-filter = pkgs.testers.runNixOSTest {
-                  imports = [ ./nixos/tests/filter.nix ];
-                  nodes.machine = {
-                    imports = [ self.nixosModules.angrr ];
-                  };
-                  node.pkgs = lib.mkForce (pkgs.extend (self.overlays.default));
-                };
-              })
+              (
+                let
+                  mkTest =
+                    file:
+                    pkgs.testers.runNixOSTest {
+                      imports = [ file ];
+                      nodes.machine = {
+                        imports = [ self.nixosModules.angrr ];
+                      };
+                      node.pkgs = lib.mkForce (pkgs.extend (self.overlays.default));
+                    };
+                in
+                lib.mkIf isLinux {
+                  nixos-test-service = mkTest ./nixos/tests/angrr.nix;
+                  nixos-test-filter = mkTest ./nixos/tests/filter.nix;
+                  nixos-test-preset = mkTest ./nixos/tests/preset.nix;
+                }
+              )
 
               (lib.mkIf isDarwin {
                 # test build only

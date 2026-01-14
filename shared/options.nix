@@ -235,7 +235,6 @@ in
 {
   meta.maintainers = pkgs.angrr.meta.maintainers;
   imports = [
-    (lib.mkRemovedOptionModule [ "services" "angrr" "period" ] configFileMigrationMsg)
     (lib.mkRemovedOptionModule [ "services" "angrr" "removeRoot" ] configFileMigrationMsg)
     (lib.mkRemovedOptionModule [ "services" "angrr" "ownedOnly" ] configFileMigrationMsg)
   ];
@@ -264,6 +263,13 @@ in
         default = [ ];
         description = ''
           Extra command-line arguments pass to angrr.
+        '';
+      };
+      period = lib.mkOption {
+        type = with lib.types; nullOr str;
+        default = null;
+        description = ''
+          Retention period for the GC roots matched by this policy.
         '';
       };
       settings = lib.mkOption {
