@@ -132,9 +132,7 @@ impl ProfilePolicy {
                         );
                 });
 
-                for p in processed_curr {
-                    processed.insert(p);
-                }
+                processed.extend(processed_curr);
             }
         }
 
