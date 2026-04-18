@@ -225,15 +225,40 @@ pub struct ProfileConfig {
     /// Only useful for system profiles.
     #[serde(default)]
     pub keep_booted_system: bool,
+
+    /// Each rule retains `n` generations every `bucket-window` duration for `bucket-amount` buckets.
+    /// `n` defaults to 1.
+    #[serde(default)]
+    pub keep_n_per_bucket: Vec<KeepNPerBucket>,
+}
+
+const fn default_periodic_rule_n() -> usize {
+    1
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct KeepNPerBucket {
+    #[serde(default = "default_periodic_rule_n")]
+    pub n: usize,
+
+    #[serde(with = "humantime_serde")]
+    #[serde(default)]
+    pub bucket_window: Duration,
+
+    #[serde(default)]
+    pub bucket_amount: u32,
 }
 
 impl ProfileConfig {
     fn validate(&self, name: &str) -> anyhow::Result<()> {
         if self.common.enable
-            && let (None, None) = (self.keep_since, self.keep_latest_n)
+            && self.keep_since.is_none()
+            && self.keep_latest_n.is_none()
+            && self.keep_n_per_bucket.is_empty()
         {
             anyhow::bail!(
-                "invalid profile policy {name}: at least one of keep-since and keep-latest-n must be set for the profile policy",
+                "invalid profile policy {name}: at least one of keep-since, keep-latest-n, or keep-n-per-bucket must be set for the profile policy",
             );
         }
         for path in &self.profile_paths {

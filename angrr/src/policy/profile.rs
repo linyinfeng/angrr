@@ -1,8 +1,11 @@
+use std::collections::BTreeSet;
 use std::{fs, path::PathBuf};
 
+use crate::{
+    config::KeepNPerBucket, config::ProfileConfig, profile::Generation, profile::Profile,
+    utils::format_duration_short,
+};
 use anyhow::Context;
-
-use crate::{config::ProfileConfig, profile::Profile, utils::format_duration_short};
 
 #[derive(Clone, Debug)]
 pub struct ProfilePolicy {
@@ -90,6 +93,46 @@ impl ProfilePolicy {
                     profile.generations[i].number,
                 );
                 keep_generation[i] = true;
+            }
+        }
+
+        // Retain `n` generations every `bucket-window` duration for `bucket-amount` buckets.
+        let sorted_generations: Vec<(usize, &Generation)> = {
+            let mut vec = profile.generations.iter().enumerate().collect::<Vec<_>>();
+            vec.sort_by_key(|(_idx, generation)| generation.root.age);
+            vec
+        };
+        // Keep track of what was processed and skip them.
+        let mut processed: BTreeSet<usize> = BTreeSet::new();
+        for &KeepNPerBucket {
+            n,
+            bucket_window,
+            bucket_amount,
+        } in &self.config.keep_n_per_bucket
+        {
+            for i in 0..bucket_amount {
+                let mut processed_curr: BTreeSet<usize> = BTreeSet::new();
+                sorted_generations.iter().filter(|(_, generation)| {
+                        let within_window = bucket_window * i <= generation.root.age
+                            && generation.root.age < bucket_window * (i + 1);
+                        let not_processed = !processed.contains(&generation.number);
+                        within_window && not_processed
+                    })
+                    .take(n)
+                    .for_each(|(gen_index, generation)| {
+                        processed_curr.insert(generation.number);
+                        keep_generation[*gen_index] = true;
+                        log::debug!(
+                            "[{}] keep generation {} by keep_n_per_bucket, namely {} generation each bucket spanning {} for {} buckets",
+                            self.name,
+                            &generation.number,
+                            n,
+                            format_duration_short(bucket_window),
+                            bucket_amount,
+                        );
+                });
+
+                processed.extend(processed_curr);
             }
         }
 

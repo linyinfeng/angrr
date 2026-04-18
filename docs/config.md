@@ -137,6 +137,37 @@ See **COMMON POLICY OPTIONS** for common options.
 
     Only useful for system profiles. Default is `false`.
 
+**keep-n-per-bucket** = list of { n: \<usize\>, bucket-window: \<duration\>, bucket-amount: \<u32\> }
+:   Specify a list of rules having `n`, `bucket-window`, and `bucket-amount` attributes.
+
+    Each rule retains `n` generations every `bucket-window` duration for `bucket-amount` buckets.
+    `n` defaults to 1.
+    This can be useful for server configurations such that there will be sparse but available older
+    generations to rollback to.
+
+    This attribute is inspired by the
+    [grandfather-father-son](https://en.wikipedia.org/wiki/Backup_rotation_scheme#Grandfather-father-son)
+    backup scheme.
+
+    Take the configuration `{n = 1; bucket-window = "1 Month"; bucket-amount = 2;}` as an example.
+    Angrr will group past generations into buckets such that each bucket contains generations of the
+    same month (_bucket-window_). It then retains 1 (_n_) most recent generation out of each bucket,
+    for first two buckets (_bucket-amount_).
+
+    Rules are processed in order. `bucket-window` is defined in `humantime::parse_duration`
+    specified in the [DURATION section](#DURATION).
+
+    `bucket-window` is used with regard to the moment angrr is run and doesn't reflect calendar.
+    For example, a period of one week represents the seven days before the run time, not the number
+    of days since the start of the calendar week.
+
+    Rules can have overlapping `bucket-window`. When a generation of a bucket satisfying a rule is already
+    kept by a previous rule, we take the next most recent one of the same bucket and give up if
+    there are no more in the same bucket.
+    In other words: when looking for generations within a bucket that are not yet handled and none
+    are found, we do not look into the next youngest bucket for them.
+    Separate rules for that next bucket will still be applied.
+
 # FILTER OPTIONS
 
 **program** = \<path\>
