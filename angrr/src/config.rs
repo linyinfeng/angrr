@@ -26,6 +26,7 @@ pub trait Validate {
 
 /// Main angrr settings structure
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 #[serde(rename_all = "kebab-case")]
 pub struct Config {
     /// Store path for validation
@@ -137,6 +138,7 @@ impl Config {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 #[serde(rename_all = "kebab-case")]
 pub struct TemporaryRootConfig {
     #[serde(flatten)]
@@ -191,6 +193,7 @@ impl TemporaryRootConfig {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 #[serde(rename_all = "kebab-case")]
 pub struct ProfileConfig {
     #[serde(flatten)]
@@ -238,6 +241,7 @@ const fn default_periodic_rule_n() -> usize {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
 pub struct KeepNPerBucket {
     #[serde(default = "default_periodic_rule_n")]
     pub n: usize,
@@ -273,6 +277,7 @@ impl ProfileConfig {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 #[serde(rename_all = "kebab-case")]
 pub struct CommonPolicyConfig {
     /// Enable this policy
@@ -281,6 +286,7 @@ pub struct CommonPolicyConfig {
 }
 
 #[derive(Clone, Debug, DefaultFromSerde, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 #[serde(rename_all = "kebab-case")]
 pub struct TouchConfig {
     /// List of glob patterns to include or exclude files when touching GC roots.
@@ -374,4 +380,51 @@ pub fn globs_to_override<P: AsRef<Path>>(path: P, globs: &[String]) -> anyhow::R
         builder.add(glob)?;
     }
     Ok(builder.build()?)
+}
+
+#[test]
+fn reject_unknown_fields_in_config() {
+    use figment::{Error, Figment, error::Kind, providers::Toml};
+
+    fn shouldnt_parse<C>(config_content: &str)
+    where
+        C: Serialize + DeserializeOwned + Debug,
+    {
+        let figment = Figment::from(Toml::string(config_content));
+        let config: Result<C, Error> = figment.extract();
+
+        match config {
+            Ok(config_ok) => panic!(
+                "This configuration is not valid and should be rejected. \
+However, we parsed {:?}",
+                config_ok
+            ),
+            Err(err) => match err.kind {
+                Kind::UnknownField(_, _) => (),
+                // ProfileConfig and TemporaryRootConfig fails with
+                // Message("unknown field ...")
+                Kind::Message(s) => assert!(s.contains("unknown field")),
+                wrong_kind => panic!(
+                    "This configuration is not valid and should be rejected. \
+However, it failed with kind {:?}",
+                    wrong_kind
+                ),
+            },
+        }
+    }
+
+    shouldnt_parse::<Config>("foo = true");
+    shouldnt_parse::<TemporaryRootConfig>(
+        "path-regex = \"\"
+foo = true",
+    );
+    shouldnt_parse::<ProfileConfig>(
+        "enable = true
+profile-paths = []
+foo = true
+",
+    );
+    shouldnt_parse::<KeepNPerBucket>("foo = 1");
+    shouldnt_parse::<CommonPolicyConfig>("foo = true");
+    shouldnt_parse::<TouchConfig>("foo = true");
 }
