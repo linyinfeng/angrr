@@ -360,7 +360,13 @@ where
     if !file_loaded {
         log::info!("no configuration file found, using empty configuration");
     }
-    let config: C = figment.merge(Env::prefixed("ANGRR_")).extract()?;
+    let config: C = figment
+        .merge(
+            // Ignore log_style used in main for logging
+            // Ignore direnv_log which isn't part of this binary
+            Env::prefixed("ANGRR_").filter(|k| matches!(k.as_str(), "log_style" | "direnv_log")),
+        )
+        .extract()?;
     config.validate()?;
     Ok(config)
 }
