@@ -364,7 +364,7 @@ where
         .merge(
             // Ignore log_style used in main for logging
             // Ignore direnv_log which isn't part of this binary
-            Env::prefixed("ANGRR_").filter(|k| matches!(k.as_str(), "log_style" | "direnv_log")),
+            Env::prefixed("ANGRR_").ignore(&["LOG_STYLE", "DIRENV_LOG"]),
         )
         .extract()?;
     config.validate()?;
