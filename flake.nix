@@ -81,6 +81,7 @@
                   nixos-test-filter = mkTest ./nixos/tests/filter.nix;
                   nixos-test-preset = mkTest ./nixos/tests/preset.nix;
                   nixos-test-keep-n-per-bucket = mkTest ./nixos/tests/keep-n-per-bucket.nix;
+                  nixos-test-validate = mkTest ./nixos/tests/validate.nix;
                 }
               )
 
