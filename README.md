@@ -72,6 +72,19 @@ Or you can define your own policies in the `services.angrr.settings` option:
           keep-latest-n = 5;
           keep-booted-system = true;
           keep-current-system = true;
+          # Since 0.2.4
+          # "Grandfather-father-son" rotation scheme
+          # See `man 5 angrr`
+          keep-n-per-bucket = [
+            {
+              bucket-window = "1 day";
+              bucket-amount = 7;
+            }
+            {
+              bucket-window = "1 week";
+              bucket-amount = 4;
+            }
+          ];
         };
         user = {
           enable = false; # Policies can be individually disabled
