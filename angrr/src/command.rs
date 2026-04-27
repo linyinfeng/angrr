@@ -39,6 +39,10 @@ pub struct CommonOptions {
     /// Path to configuration file
     #[arg(global = true, short, long, value_name = "FILE")]
     pub config: Option<PathBuf>,
+
+    /// Do not load the global configuration file
+    #[arg(global = true, long)]
+    pub no_global_config: bool,
 }
 
 #[derive(Clone, Debug, Subcommand)]

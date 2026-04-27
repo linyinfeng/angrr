@@ -338,14 +338,14 @@ fn default_touch_project_globs() -> Vec<String> {
     vec!["!.git".to_string()]
 }
 
-pub fn load_config<P, C>(path: &Option<P>) -> anyhow::Result<C>
+pub fn load_config<P, C>(path: &Option<P>, no_global_config: bool) -> anyhow::Result<C>
 where
     P: AsRef<Path>,
     C: Serialize + DeserializeOwned + Validate + Debug,
 {
     let mut figment = Figment::new();
     let mut file_loaded = false;
-    if let Some(p) = global_config_file() {
+    if !no_global_config && let Some(p) = global_config_file() {
         figment = figment.merge(Toml::file(&p));
         file_loaded = true;
     }
@@ -388,49 +388,54 @@ pub fn globs_to_override<P: AsRef<Path>>(path: P, globs: &[String]) -> anyhow::R
     Ok(builder.build()?)
 }
 
-#[test]
-fn reject_unknown_fields_in_config() {
-    use figment::{Error, Figment, error::Kind, providers::Toml};
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    fn shouldnt_parse<C>(config_content: &str)
-    where
-        C: Serialize + DeserializeOwned + Debug,
-    {
-        let figment = Figment::from(Toml::string(config_content));
-        let config: Result<C, Error> = figment.extract();
+    #[test]
+    fn reject_unknown_fields_in_config() {
+        use figment::{Error, Figment, error::Kind, providers::Toml};
 
-        match config {
-            Ok(config_ok) => panic!(
-                "This configuration is not valid and should be rejected. \
-However, we parsed {:?}",
-                config_ok
-            ),
-            Err(err) => match err.kind {
-                Kind::UnknownField(_, _) => (),
-                // ProfileConfig and TemporaryRootConfig fails with
-                // Message("unknown field ...")
-                Kind::Message(s) => assert!(s.contains("unknown field")),
-                wrong_kind => panic!(
+        fn shouldnt_parse<C>(config_content: &str)
+        where
+            C: Serialize + DeserializeOwned + Debug,
+        {
+            let figment = Figment::from(Toml::string(config_content));
+            let config: Result<C, Error> = figment.extract();
+
+            match config {
+                Ok(config_ok) => panic!(
                     "This configuration is not valid and should be rejected. \
-However, it failed with kind {:?}",
-                    wrong_kind
+    However, we parsed {:?}",
+                    config_ok
                 ),
-            },
+                Err(err) => match err.kind {
+                    Kind::UnknownField(_, _) => (),
+                    // ProfileConfig and TemporaryRootConfig fails with
+                    // Message("unknown field ...")
+                    Kind::Message(s) => assert!(s.contains("unknown field")),
+                    wrong_kind => panic!(
+                        "This configuration is not valid and should be rejected. \
+    However, it failed with kind {:?}",
+                        wrong_kind
+                    ),
+                },
+            }
         }
-    }
 
-    shouldnt_parse::<Config>("foo = true");
-    shouldnt_parse::<TemporaryRootConfig>(
-        "path-regex = \"\"
-foo = true",
-    );
-    shouldnt_parse::<ProfileConfig>(
-        "enable = true
-profile-paths = []
-foo = true
-",
-    );
-    shouldnt_parse::<KeepNPerBucket>("foo = 1");
-    shouldnt_parse::<CommonPolicyConfig>("foo = true");
-    shouldnt_parse::<TouchConfig>("foo = true");
+        shouldnt_parse::<Config>("foo = true");
+        shouldnt_parse::<TemporaryRootConfig>(
+            "path-regex = \"\"
+    foo = true",
+        );
+        shouldnt_parse::<ProfileConfig>(
+            "enable = true
+    profile-paths = []
+    foo = true
+    ",
+        );
+        shouldnt_parse::<KeepNPerBucket>("foo = 1");
+        shouldnt_parse::<CommonPolicyConfig>("foo = true");
+        shouldnt_parse::<TouchConfig>("foo = true");
+    }
 }
