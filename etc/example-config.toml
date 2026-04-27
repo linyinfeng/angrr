@@ -32,6 +32,10 @@ keep-since = "14d"
 keep-latest-n = 3
 keep-booted-system = true
 keep-current-system = true
+keep-n-per-bucket = [
+  { bucket-window = "1 day", bucket-amount = 7 },
+  { bucket-window = "1 week", bucket-amount = 4 },
+]
 
 [profile-policies.user]
 enable = false
