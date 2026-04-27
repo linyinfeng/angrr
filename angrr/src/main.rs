@@ -17,7 +17,7 @@ fn main() -> anyhow::Result<()> {
 
     match options.command {
         Commands::Run(run_opts) => {
-            let config = load_config(&options.common.config)?;
+            let config = load_config(&options.common.config, options.common.no_global_config)?;
             log_loaded_config(&config)?;
             let context = RunContext::new(run_opts, config)?;
             log::trace!("context = {context:#?}");
@@ -25,11 +25,12 @@ fn main() -> anyhow::Result<()> {
             context.finish()?;
         }
         Commands::Validate => {
-            let config: Config = load_config(&options.common.config)?;
+            let config: Config =
+                load_config(&options.common.config, options.common.no_global_config)?;
             println!("{}", angrr::config::display_config(&config)?)
         }
         Commands::Touch(touch_opts) => {
-            let config = load_config(&options.common.config)?;
+            let config = load_config(&options.common.config, options.common.no_global_config)?;
             log_loaded_config(&config)?;
             let context = TouchContext::new(touch_opts, config);
             log::trace!("context = {context:#?}");

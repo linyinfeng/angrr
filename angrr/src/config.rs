@@ -338,14 +338,14 @@ fn default_touch_project_globs() -> Vec<String> {
     vec!["!.git".to_string()]
 }
 
-pub fn load_config<P, C>(path: &Option<P>) -> anyhow::Result<C>
+pub fn load_config<P, C>(path: &Option<P>, no_global_config: bool) -> anyhow::Result<C>
 where
     P: AsRef<Path>,
     C: Serialize + DeserializeOwned + Validate + Debug,
 {
     let mut figment = Figment::new();
     let mut file_loaded = false;
-    if let Some(p) = global_config_file() {
+    if !no_global_config && let Some(p) = global_config_file() {
         figment = figment.merge(Toml::file(&p));
         file_loaded = true;
     }
