@@ -26,6 +26,16 @@ let
         keep-latest-n = 5;
         keep-booted-system = true;
         keep-current-system = true;
+        keep-n-per-bucket = [
+          {
+            bucket-window = "1 day";
+            bucket-amount = 7;
+          }
+          {
+            bucket-window = "1 week";
+            bucket-amount = 4;
+          }
+        ];
       };
       user = {
         enable = false;
@@ -197,6 +207,13 @@ let
           Whether to keep the last booted system generation. Only useful for system profiles.
         '';
       };
+      keep-n-per-bucket = lib.mkOption {
+        type = with lib.types; listOf (submodule keepNPerBucketOptions);
+        default = [ ];
+        description = ''
+          Specify a list of rules having n, bucket-window, and bucket-amount attributes.
+        '';
+      };
     };
   };
   filterOptions = {
@@ -213,6 +230,31 @@ let
         default = [ ];
         description = ''
           Extra command-line arguments pass to the external filter program.
+        '';
+      };
+    };
+  };
+  keepNPerBucketOptions = {
+    freeformType = toml.type;
+    options = {
+      n = lib.mkOption {
+        type = lib.types.int;
+        default = 1;
+        description = ''
+          Retain n generations every bucket-window duration for bucket-amount buckets.
+        '';
+      };
+      bucket-window = lib.mkOption {
+        type = lib.types.str;
+        description = ''
+          The duration of the bucket window.
+        '';
+      };
+      bucket-amount = lib.mkOption {
+        type = lib.types.int;
+        default = 1;
+        description = ''
+          The number of buckets to keep.
         '';
       };
     };
