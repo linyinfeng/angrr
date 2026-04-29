@@ -112,16 +112,15 @@ impl ProfilePolicy {
         {
             for i in 0..bucket_amount {
                 let mut processed_curr: BTreeSet<usize> = BTreeSet::new();
-                sorted_generations.iter().filter(|(_, generation)| {
+                sorted_generations.iter().filter(|(gen_index, generation)| {
                         let within_window = bucket_window * i <= generation.root.age
                             && generation.root.age < bucket_window * (i + 1);
-                        let not_processed = !processed.contains(&generation.number);
+                        let not_processed = !processed.contains(gen_index);
                         within_window && not_processed
                     })
                     .take(n)
                     .for_each(|(gen_index, generation)| {
-                        processed_curr.insert(generation.number);
-                        keep_generation[*gen_index] = true;
+                        processed_curr.insert(*gen_index);
                         log::debug!(
                             "[{}] keep generation {} by keep_n_per_bucket, namely {} generation each bucket spanning {} for {} buckets",
                             self.name,
@@ -130,6 +129,7 @@ impl ProfilePolicy {
                             format_duration_short(bucket_window),
                             bucket_amount,
                         );
+                        keep_generation[*gen_index] = true;
                 });
 
                 processed.extend(processed_curr);
