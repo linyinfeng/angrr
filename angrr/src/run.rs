@@ -145,7 +145,7 @@ impl RunContext {
         for gc_root in gc_roots {
             let mut matched = None;
             for (name, policy) in policies {
-                if policy.monitored(gc_root)? {
+                if policy.monitored(&self.options, gc_root)? {
                     matched = Some((name, policy));
                     break;
                 }
