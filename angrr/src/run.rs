@@ -379,7 +379,7 @@ impl RunContext {
         P: AsRef<Path>,
     {
         let path = path.as_ref();
-        if path.starts_with("~") {
+        if path.starts_with("~/") {
             if self.owned_only {
                 let home = utils::current_user_home()?;
                 Ok(vec![home.join(path.strip_prefix("~").unwrap())])
