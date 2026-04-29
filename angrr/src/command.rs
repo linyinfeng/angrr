@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand, ValueEnum};
+use humantime::Duration;
 
 use core::fmt;
 use std::{ffi::OsString, path::PathBuf};
@@ -104,6 +105,10 @@ pub struct RunOptions {
     /// Use `\0` character as the output delimiter.
     #[arg(long)]
     pub null_output_delimiter: bool,
+
+    /// Timeout for external filters
+    #[arg(long, default_value = "1000ms")]
+    pub filter_timeout: Duration,
 
     /// Do not remove file.
     #[arg(long)]

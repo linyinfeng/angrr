@@ -98,15 +98,32 @@
           su user1 --command "${lib.getExe (mkGcRoot user1GcRoots)}"
           su user2 --command "${lib.getExe (mkGcRoot user2GcRoots)}"
           "${lib.getExe (mkGcRoot rootGcRoots)}"
-          su user1 --command "${lib.getExe angrrCommand}"
+          su user1 --command "${lib.getExe angrrCommand} --dry-run"
           echo "comparing removed paths..."
           diff --unified <(sort "${expectedRemovedPathsFile}") <(sort /tmp/removed)
           echo "done"
         '';
       };
+      toml = pkgs.formats.toml { };
+      slowJq = pkgs.writeShellApplication {
+        name = "slow-jq";
+        runtimeInputs = [ pkgs.jq ];
+        text = ''
+          sleep 0.5
+          exec jq "$@"
+        '';
+      };
+      slowConfig = toml.generate "filter-timeout-slow.toml" {
+        temporary-root-policies.result.filter.program = "${lib.getExe slowJq}"; # never exits
+      };
     in
     ''
       start_all()
-      machine.succeed("${lib.getExe testScript}")
+      with subtest("Filter with jq"):
+        machine.succeed("${lib.getExe testScript}")
+      with subtest("Filter timeout"):
+        machine.succeed("angrr run --interactive=never --dry-run --config ${slowConfig}")
+        machine.succeed("angrr run --interactive=never --dry-run --filter-timeout=1s --config ${slowConfig}")
+        machine.fail("angrr run --interactive=never --dry-run --filter-timeout=100ms --config ${slowConfig}")
     '';
 }
