@@ -232,7 +232,7 @@ pub struct ProfileConfig {
     /// Each rule retains `n` generations every `bucket-window` duration for `bucket-amount` buckets.
     /// `n` defaults to 1.
     #[serde(default)]
-    pub keep_n_per_bucket: Vec<KeepNPerBucket>,
+    pub keep_n_per_bucket: Vec<KeepNPerBucketConfig>,
 }
 
 const fn default_periodic_rule_n() -> usize {
@@ -242,15 +242,11 @@ const fn default_periodic_rule_n() -> usize {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
-pub struct KeepNPerBucket {
+pub struct KeepNPerBucketConfig {
     #[serde(default = "default_periodic_rule_n")]
     pub n: usize,
-
     #[serde(with = "humantime_serde")]
-    #[serde(default)]
     pub bucket_window: Duration,
-
-    #[serde(default)]
     pub bucket_amount: u32,
 }
 
@@ -270,6 +266,11 @@ impl ProfileConfig {
                 anyhow::bail!(
                     "invalid profile policy {name}: profile path \"{path:?}\" must be absolute or start with `~`",
                 );
+            }
+        }
+        for cfg in &self.keep_n_per_bucket {
+            if cfg.bucket_window.is_zero() {
+                anyhow::bail!("invalid keep-n-per-bucket: bucket window is zero");
             }
         }
         Ok(())
@@ -434,7 +435,7 @@ mod tests {
     foo = true
     ",
         );
-        shouldnt_parse::<KeepNPerBucket>("foo = 1");
+        shouldnt_parse::<KeepNPerBucketConfig>("foo = 1");
         shouldnt_parse::<CommonPolicyConfig>("foo = true");
         shouldnt_parse::<TouchConfig>("foo = true");
     }

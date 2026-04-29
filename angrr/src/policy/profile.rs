@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use std::{fs, path::PathBuf};
 
 use crate::{
-    config::KeepNPerBucket, config::ProfileConfig, profile::Generation, profile::Profile,
+    config::KeepNPerBucketConfig, config::ProfileConfig, profile::Generation, profile::Profile,
     utils::format_duration_short,
 };
 use anyhow::Context;
@@ -104,7 +104,7 @@ impl ProfilePolicy {
         };
         // Keep track of what was processed and skip them.
         let mut processed: BTreeSet<usize> = BTreeSet::new();
-        for &KeepNPerBucket {
+        for &KeepNPerBucketConfig {
             n,
             bucket_window,
             bucket_amount,
