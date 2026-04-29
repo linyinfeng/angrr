@@ -50,14 +50,18 @@ impl TemporaryRootPolicy {
                 path: root.path.clone(),
                 gc_root: root.link_path.clone(),
             };
-            let not_ignored = filter
-                .run(&input)
-                .with_context(|| format!("failed to run filter on input: {input:?}"))?;
+            let not_ignored = filter.run(&input).with_context(|| {
+                format!(
+                    "failed to run filter {:?} on input: {input:?}",
+                    filter.program
+                )
+            })?;
             if !not_ignored {
                 log::debug!(
-                    "[{}] ignore {:?}, filtered out by external filter",
+                    "[{}] ignore {:?}, filtered out by external filter {:?}",
                     self.name,
                     root.path,
+                    filter.program
                 );
                 return Ok(false);
             }
