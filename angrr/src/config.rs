@@ -262,9 +262,9 @@ impl ProfileConfig {
             );
         }
         for path in &self.profile_paths {
-            if !(path.starts_with("~") || path.is_absolute()) {
+            if !(path.starts_with("~/") || path.is_absolute()) {
                 anyhow::bail!(
-                    "invalid profile policy {name}: profile path \"{path:?}\" must be absolute or start with `~`",
+                    "invalid profile policy {name}: profile path \"{path:?}\" must be absolute or start with `~/`",
                 );
             }
         }
