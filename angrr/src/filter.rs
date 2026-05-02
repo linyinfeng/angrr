@@ -1,11 +1,11 @@
-use std::{
-    io::Write,
-    path::PathBuf,
-    process::{Command, Stdio},
-};
+use std::path::PathBuf;
 
 use anyhow::Context;
+use log::Level;
 use serde::{Deserialize, Serialize};
+use subprocess::Exec;
+
+use crate::command::RunOptions;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -22,7 +22,7 @@ pub struct Input {
 }
 
 impl Filter {
-    pub fn run(&self, input: &Input) -> anyhow::Result<bool> {
+    pub fn run(&self, options: &RunOptions, input: &Input) -> anyhow::Result<bool> {
         let json = serde_json::to_string(input)
             .with_context(|| format!("failed to serialize input for filter: {input:?}"))?;
         log::trace!(
@@ -30,44 +30,32 @@ impl Filter {
             self.program,
             self.arguments
         );
-        let mut child = Command::new(&self.program)
+        let job = Exec::cmd(&self.program)
             .args(&self.arguments)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
+            .stdin(json.into_bytes())
+            .start()
             .with_context(|| {
                 format!(
                     "failed to invoke external filter {:?} with arguments: {:?}",
                     self.program, self.arguments
                 )
             })?;
-        {
-            let mut stdin = child
-                .stdin
-                .take()
-                .with_context(|| "failed to take stdin of external filter")?;
-            stdin
-                .write_all(json.as_bytes())
-                .context("can not write to stdin of external filter")?;
-            // stdin drop and closed here
+        let capture = job.capture_timeout(options.filter_timeout.into())?;
+        if !capture.stdout.is_empty() {
+            log::debug!("external filter stdout: {}", capture.stdout_str());
         }
-        let output = child
-            .wait_with_output()
-            .context("failed to wait on external filter")?;
-        // log stdout and stderr for debugging
-        if !output.stdout.is_empty() {
-            log::debug!(
-                "external filter stdout: {}",
-                String::from_utf8_lossy(&output.stdout)
-            );
+        if !capture.stderr.is_empty() {
+            log::warn!("external filter stderr: {}", capture.stderr_str());
         }
-        if !output.stderr.is_empty() {
-            log::warn!(
-                "external filter stderr: {}",
-                String::from_utf8_lossy(&output.stderr)
-            );
-        }
-        Ok(output.status.success())
+        log::log!(
+            if capture.exit_status.success() {
+                Level::Trace
+            } else {
+                Level::Debug
+            },
+            "external filter exit with status: {}",
+            capture.exit_status
+        );
+        Ok(capture.exit_status.success())
     }
 }
