@@ -9,7 +9,6 @@ pub struct Statistics {
     pub traversed: Counter,
     pub monitored: Counter,
     pub expired: Counter,
-    pub invalid: Counter,
     pub removed: Counter,
 }
 
@@ -19,7 +18,6 @@ impl Statistics {
         let monitored = self.monitored.done();
         let expired = self.expired.done();
         let removed = self.removed.done();
-        let invalid = self.invalid.done();
         let kept = traversed - removed;
         let num_style = |n| term.style().bold().apply_to(n);
         [
@@ -31,7 +29,6 @@ impl Statistics {
                 num_style(removed),
                 dry_run_indicator(term, removed != 0 && dry_run)
             ),
-            format!("invalid:   {}", num_style(invalid)),
             format!("kept:      {}", num_style(kept)),
         ]
         .join("\n")
