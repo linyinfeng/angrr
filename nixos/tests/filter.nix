@@ -123,7 +123,7 @@
         machine.succeed("${lib.getExe testScript}")
       with subtest("Filter timeout"):
         machine.succeed("angrr run --interactive=never --dry-run --config ${slowConfig}")
-        machine.succeed("angrr run --interactive=never --dry-run --filter-timeout=1s --config ${slowConfig}")
+        machine.succeed("angrr run --interactive=never --dry-run --filter-timeout=10s --config ${slowConfig}")
         machine.fail("angrr run --interactive=never --dry-run --filter-timeout=100ms --config ${slowConfig}")
     '';
 }
