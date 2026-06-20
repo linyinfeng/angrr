@@ -26,7 +26,7 @@ pub fn validate_store_path<P1: AsRef<Path>, P2: AsRef<Path>>(
             }
         }
         Err(e) => {
-            log::warn!("failed to canonicalize {target:?} for validation: {e}");
+            log::debug!("failed to canonicalize {target:?} for validation: {e}");
             None
         }
     }
