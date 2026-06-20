@@ -3,6 +3,7 @@ use std::os::unix::ffi::OsStrExt;
 use std::{fs, os::unix::fs::MetadataExt, path::Path};
 use uzers::{get_user_by_uid, os::unix::UserExt};
 
+use crate::command::RunOptions;
 use crate::gc_root::GcRoot;
 use crate::{config::TemporaryRootConfig, filter};
 
@@ -19,7 +20,7 @@ impl TemporaryRootPolicy {
 }
 
 impl TemporaryRootPolicy {
-    pub fn monitored(&self, root: &GcRoot) -> anyhow::Result<bool> {
+    pub fn monitored(&self, options: &RunOptions, root: &GcRoot) -> anyhow::Result<bool> {
         if self.ignored_by_prefix(&root.path)
             || self.ignored_by_prefix_in_home(&root.path, &root.path_metadata)
         {
@@ -50,14 +51,18 @@ impl TemporaryRootPolicy {
                 path: root.path.clone(),
                 gc_root: root.link_path.clone(),
             };
-            let not_ignored = filter
-                .run(&input)
-                .with_context(|| format!("failed to run filter on input: {input:?}"))?;
+            let not_ignored = filter.run(options, &input).with_context(|| {
+                format!(
+                    "failed to run filter {:?} on input: {input:?}",
+                    filter.program
+                )
+            })?;
             if !not_ignored {
                 log::debug!(
-                    "[{}] ignore {:?}, filtered out by external filter",
+                    "[{}] ignore {:?}, filtered out by external filter {:?}",
                     self.name,
                     root.path,
+                    filter.program
                 );
                 return Ok(false);
             }

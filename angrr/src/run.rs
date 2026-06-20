@@ -145,7 +145,7 @@ impl RunContext {
         for gc_root in gc_roots {
             let mut matched = None;
             for (name, policy) in policies {
-                if policy.monitored(gc_root)? {
+                if policy.monitored(&self.options, gc_root)? {
                     matched = Some((name, policy));
                     break;
                 }
@@ -379,7 +379,7 @@ impl RunContext {
         P: AsRef<Path>,
     {
         let path = path.as_ref();
-        if path.starts_with("~") {
+        if path.starts_with("~/") {
             if self.owned_only {
                 let home = utils::current_user_home()?;
                 Ok(vec![home.join(path.strip_prefix("~").unwrap())])
