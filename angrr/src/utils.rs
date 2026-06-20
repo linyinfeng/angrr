@@ -15,31 +15,19 @@ pub fn validate_store_path<P1: AsRef<Path>, P2: AsRef<Path>>(
     store: P1,
     target: P2,
 ) -> Option<PathBuf> {
-    let target = target.as_ref();
-    match canonicalize_to_store(store, target) {
-        Ok(path) => Some(path),
-        Err(e) => {
-            log::warn!("failed to canonicalize {target:?} for validation: {e}");
-            None
-        }
-    }
-}
-
-pub fn canonicalize_to_store<P1: AsRef<Path>, P2: AsRef<Path>>(
-    store: P1,
-    path: P2,
-) -> anyhow::Result<PathBuf> {
     let store = store.as_ref();
-    let path = path.as_ref();
-    if path.starts_with(store) {
-        Ok(PathBuf::from(path))
-    } else {
-        let metadata = fs::symlink_metadata(path)?;
-        if metadata.is_symlink() {
-            let next = fs::read_link(path)?;
-            canonicalize_to_store(store, next)
-        } else {
-            anyhow::bail!("canonicalized to a non-store path")
+    let target = target.as_ref();
+    match fs::canonicalize(target) {
+        Ok(path) => {
+            if path.starts_with(store) {
+                Some(path)
+            } else {
+                None
+            }
+        }
+        Err(e) => {
+            log::debug!("failed to canonicalize {target:?} for validation: {e}");
+            None
         }
     }
 }
