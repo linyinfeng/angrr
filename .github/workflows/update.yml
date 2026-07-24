@@ -37,7 +37,7 @@ jobs:
       - name: Nix flake update
         run: |
           nix flake update
-          nix flake update ./nix/develop
+          nix flake update --flake ./nix/develop
           if [ -n "$(git status --porcelain -- flake.lock nix/develop/flake.lock)" ]; then
             git add flake.lock nix/develop/flake.lock
             git commit --message "Nix flake update"
