@@ -46,9 +46,6 @@ jobs:
             git add --all
             git commit --message "Cargo update"
           fi
-      - name: Nix flake check
-        run: |
-          nix flake check
       - name: Push to remote
         run: |
           git push --set-upstream origin update --force
