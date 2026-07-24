@@ -14,8 +14,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@main
         with:
-          ref: main
+          fetch-depth: 0
           token: "${{ secrets.PAT_FOR_AUTOMATED_UPDATE }}"
+      - name: Prepare branch
+        run: |
+          git checkout main
+          git branch --force update main
+          git checkout update
       - name: Install nix
         uses: cachix/install-nix-action@master
         with:
@@ -44,6 +49,15 @@ jobs:
       - name: Nix flake check
         run: |
           nix flake check
-      - name: Git push
+      - name: Push to remote
         run: |
-          git push
+          git push --set-upstream origin update --force
+      - name: Create pull request
+        run: |
+          gh pr create \
+            --base main \
+            --head update \
+            --title "Automated update" || \
+          gh pr edit update
+        env:
+          GITHUB_TOKEN: "${{ secrets.PAT_FOR_AUTOMATED_UPDATE }}"
