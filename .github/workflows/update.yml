@@ -54,7 +54,8 @@ jobs:
           gh pr create \
             --base main \
             --head update \
-            --title "Automated update" || \
-          gh pr edit update
+            --title "Automated update" \
+            --body "Automated Nix flake and Cargo dependency updates." || \
+          true
         env:
           GITHUB_TOKEN: "${{ secrets.PAT_FOR_AUTOMATED_UPDATE }}"
