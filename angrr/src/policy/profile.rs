@@ -124,7 +124,7 @@ impl ProfilePolicy {
                         log::debug!(
                             "[{}] keep generation {} by keep_n_per_bucket, namely {} generation each bucket spanning {} for {} buckets",
                             self.name,
-                            &generation.number,
+                            generation.number,
                             n,
                             format_duration_short(bucket_window),
                             bucket_amount,
