@@ -13,11 +13,11 @@ on:
 jobs:
   check:
     strategy:
+      fail-fast: false
       matrix:
         runner:
           - ubuntu-latest # x86_64-linux
           - ubuntu-24.04-arm # aarch64-linux
-          - macos-15-intel # x86_64-darwin
           - macos-latest # aarch64-linux
     runs-on: ${{ matrix.runner }}
     steps:
