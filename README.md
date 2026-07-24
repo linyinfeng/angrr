@@ -148,3 +148,19 @@ After <https://github.com/nix-community/nix-direnv/pull/631>, nix-direnv also ad
 Compared to nix-direnv, angrr touches GC roots under the project root, while nix-direnv touches GC roots under the `direnv_layout_dir`(most of the time, `.direnv` in project root).
 
 Nix-direnv's refresh functionality is enough for most use cases. But angrr's may also cover some very special use cases, so I still provide it.
+
+## Development
+
+The development environment and formatters are provided by the separate flake at `./nix/develop`, not by the project root flake. Enter the development shell with:
+
+```console
+$ nix develop ./nix/develop
+```
+
+Run all configured formatters with:
+
+```console
+$ nix develop ./nix/develop --command treefmt
+```
+
+The root flake only includes inputs required by users of angrr. Development-only inputs are kept in `./nix/develop`.

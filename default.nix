@@ -3,7 +3,7 @@ let
   getFlakeCompat =
     path:
     let
-      lock = builtins.fromJSON (builtins.readFile "${path}/flake.lock");
+      lock = builtins.fromJSON (builtins.readFile ./nix/develop/flake.lock);
       inherit (lock.nodes.flake-compat.locked)
         owner
         repo
