@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           token: "${{ secrets.PAT_FOR_AUTOMATED_UPDATE }}"
@@ -22,11 +22,11 @@ jobs:
           git branch --force update main
           git checkout update
       - name: Install nix
-        uses: cachix/install-nix-action@master
+        uses: cachix/install-nix-action@v31
         with:
           github_access_token: "${{ secrets.GITHUB_TOKEN }}"
       - name: Setup cachix
-        uses: cachix/cachix-action@master
+        uses: cachix/cachix-action@v17
         with:
           name: linyinfeng
           signingKey: "${{ secrets.CACHIX_SIGNING_KEY }}"
@@ -36,11 +36,16 @@ jobs:
           git config --global user.name "Nano"
       - name: Nix flake update
         run: |
-          nix flake update --commit-lock-file
+          nix flake update
+          nix flake update ./nix/develop
+          if [ -n "$(git status --porcelain -- flake.lock nix/develop/flake.lock)" ]; then
+            git add flake.lock nix/develop/flake.lock
+            git commit --message "Nix flake update"
+          fi
       - name: Cargo update
         run: |
-          nix develop --command cargo update
-          if [ -z $(git status --porcelain) ]; then
+          nix develop ./nix/develop --command cargo update
+          if [ -z "$(git status --porcelain)" ]; then
             echo "clean, skip..."
           else
             git add --all
@@ -51,11 +56,13 @@ jobs:
           git push --set-upstream origin update --force
       - name: Create pull request
         run: |
+          # Create the update PR, or refresh its body when the PR already exists.
           gh pr create \
             --base main \
             --head update \
             --title "Automated update" \
             --body "Automated Nix flake and Cargo dependency updates." || \
-          true
+          gh pr edit update \
+            --body "Automated Nix flake and Cargo dependency updates."
         env:
           GITHUB_TOKEN: "${{ secrets.PAT_FOR_AUTOMATED_UPDATE }}"
