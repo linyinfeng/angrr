@@ -32,17 +32,19 @@ pub fn validate_store_path<P1: AsRef<Path>, P2: AsRef<Path>>(
     }
 }
 
-pub fn discover_users(roots: &[Arc<GcRoot>]) -> anyhow::Result<Vec<uzers::User>> {
+pub fn discover_users(roots: &[Arc<GcRoot>]) -> Vec<uzers::User> {
     let uids: BTreeSet<_> = roots.iter().map(|root| root.path_metadata.uid()).collect();
     let mut users = Vec::new();
     for uid in uids {
         match get_user_by_uid(uid) {
             Some(user) => users.push(user),
-            None => anyhow::bail!("failed to get user by uid {}", uid),
+            None => {
+                log::warn!("failed to get user by uid {}, user skipped", uid);
+            }
         }
     }
     log::trace!("user discovery result: {users:?}");
-    Ok(users)
+    users
 }
 
 pub fn user_homes(users: &[uzers::User]) -> Vec<PathBuf> {
