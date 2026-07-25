@@ -208,11 +208,13 @@ impl RunContext {
             .iter()
             .map(|root| (&root.path, root.clone()))
             .collect();
+        let users = utils::discover_users(gc_roots);
+        let user_homes = utils::user_homes(&users);
         for (policy_name, profile_policy) in &self.profile_policies {
             let original_path = &profile_policy.config.profile_paths;
             let expanded: Vec<_> = original_path
                 .iter()
-                .map(|path| self.expand_profile_path(path, gc_roots))
+                .map(|path| self.expand_profile_path(path, &user_homes))
                 .collect::<anyhow::Result<Vec<_>>>()?
                 .iter()
                 .flatten()
@@ -373,7 +375,7 @@ impl RunContext {
     fn expand_profile_path<P>(
         &self,
         path: P,
-        gc_roots: &[Arc<GcRoot>],
+        user_homes: &[PathBuf],
     ) -> anyhow::Result<Vec<PathBuf>>
     where
         P: AsRef<Path>,
@@ -384,10 +386,8 @@ impl RunContext {
                 let home = utils::current_user_home()?;
                 Ok(vec![home.join(path.strip_prefix("~").unwrap())])
             } else {
-                let users = utils::discover_users(gc_roots)?;
-                let user_homes = utils::user_homes(&users);
                 Ok(user_homes
-                    .into_iter()
+                    .iter()
                     .map(|home| home.join(path.strip_prefix("~").unwrap()))
                     .collect())
             }

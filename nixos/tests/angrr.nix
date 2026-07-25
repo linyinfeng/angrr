@@ -236,5 +236,10 @@ in
     machine.succeed("readlink  /nix/var/nix/profiles/per-user/root/profile-4-link") # Not monitored
     machine.succeed("readlink  /nix/var/nix/profiles/per-user/root/profile-5-link") # Not monitored
     machine.succeed("readlink  /nix/var/nix/profiles/per-user/root/profile-6-link") # Not monitored
+
+    # Test skipping stale users
+    machine.succeed("nix build /run/current-system --out-link /tmp/result-stale-user-gc-root")
+    machine.succeed("chown 1001:1001 --no-dereference /tmp/result-stale-user-gc-root")
+    machine.succeed("sudo angrr run --no-prompt --dry-run")
   '';
 }
