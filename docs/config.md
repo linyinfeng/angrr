@@ -110,6 +110,10 @@ See **COMMON POLICY OPTIONS** for common options.
 
 # PROFILE POLICY OPTIONS
 
+Interaction between `keep-since` / `keep-latest-n` / `keep-n-per-bucket` / `keep-*` (etc) options:
+There's no interaction; they don't depend on each other's values.
+Multiple such rules may independently mark the same generation to be retained.
+
 See **COMMON POLICY OPTIONS** for common options.
 
 **profile-paths** = [\<path1\>, \<path2\>, ...]
@@ -140,33 +144,41 @@ See **COMMON POLICY OPTIONS** for common options.
 **keep-n-per-bucket** = list of { n: \<usize\>, bucket-window: \<duration\>, bucket-amount: \<u32\> }
 :   Specify a list of rules having `n`, `bucket-window`, and `bucket-amount` attributes.
 
-    Each rule retains `n` generations every `bucket-window` duration for `bucket-amount` buckets.
     `n` defaults to 1.
-    This can be useful for server configurations such that there will be sparse but available older
-    generations to rollback to.
+
+    Each rule may retain up to `n` generations every `bucket-window` duration for `bucket-amount` buckets.
+    allowing for keeping generations for long time, but with sparser old generations.
+    This can be useful when access to old generations in wanted,
+    but keeping every generation in between is considered a waste of space.
 
     This attribute is inspired by the
     [grandfather-father-son](https://en.wikipedia.org/wiki/Backup_rotation_scheme#Grandfather-father-son)
     backup scheme.
 
-    Take the configuration `{n = 1; bucket-window = "1 Month"; bucket-amount = 2;}` as an example.
-    Angrr will group past generations into buckets such that each bucket contains generations of the
-    same month (_bucket-window_). It then retains 1 (_n_) most recent generation out of each bucket,
-    for first two buckets (_bucket-amount_).
+    Take the configuration `{ n = 1; bucket-window = "1 Month"; bucket-amount = 2; }` as an example.
+    Angrr will then, for algorithm purposes, create two logical buckets,
+    that span respectively `[now to -30 days)` and `[-30 days to -60 days)`,
+    and both these buckets will have maximum capacity of 1 (`n`) items (generations).
 
-    Rules are processed in order. `bucket-window` is defined in `humantime::parse_duration`
-    specified in the [DURATION section](#DURATION).
+    When specifying multiple rules, they will overlap with each other.
+    Ovelapping buckets/rules claim order is determined by following rules:
+    - Last rules specified in the `keep-n-per-bucket` list are checked first.
+    - Older generations claim free slots first.
+    Therefore, the order of rules declaration matters.
+    Despite, the rules should be sorted in the config from smallest `bucket-window`
+    to largest - otherwise they might not work as expected.
 
+    Whenever a generation is matching against a bucket, it going to retained, and
+    a 1 of ouf `n` slots of the that bucket will be claimed and removed from claiming for other generations.
+    When the number of available slots of reaches 0, it obviously cannot claim other generations.
+    Respectively, when the number of all buckets with at least 1 available slots reaches 0,
+    i.e. when `keep-n-per-bucket`, in total, has no more slots,
+    the remaining generations, that were also not marked to retain by other `keep-*` rules, will be deleted.
+
+    `bucket-window` format is `humantime::parse_duration`, specified in the [DURATION section](#DURATION).
     `bucket-window` is used with regard to the moment angrr is run and doesn't reflect calendar.
     For example, a period of one week represents the seven days before the run time, not the number
     of days since the start of the calendar week.
-
-    Rules can have overlapping `bucket-window`. When a generation of a bucket satisfying a rule is already
-    kept by a previous rule, we take the next most recent one of the same bucket and give up if
-    there are no more in the same bucket.
-    In other words: when looking for generations within a bucket that are not yet handled and none
-    are found, we do not look into the next youngest bucket for them.
-    Separate rules for that next bucket will still be applied.
 
 # FILTER OPTIONS
 
