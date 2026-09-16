@@ -96,7 +96,6 @@ impl ProfilePolicy {
             }
         }
 
-        // Retain `n` generations every `bucket-window` duration for `bucket-amount` buckets.
         let sorted_generations: Vec<(usize, &Generation)> = {
             let mut vec = profile.generations.iter().enumerate().collect::<Vec<_>>();
             vec.sort_by_key(|(_idx, generation)| generation.root.age);
@@ -104,15 +103,17 @@ impl ProfilePolicy {
         };
         // Keep track of what was processed and skip them.
         let mut processed: BTreeSet<usize> = BTreeSet::new();
+        // Retain `n` generations every `bucket-window` duration for `bucket-amount` buckets.
+        // Prioritize preserving old generations over newer ones, that's why iteration is in reverse.
         for &KeepNPerBucketConfig {
             n,
             bucket_window,
             bucket_amount,
-        } in &self.config.keep_n_per_bucket
+        } in self.config.keep_n_per_bucket.iter().rev()
         {
             for i in 0..bucket_amount {
                 let mut processed_curr: BTreeSet<usize> = BTreeSet::new();
-                sorted_generations.iter().filter(|(gen_index, generation)| {
+                sorted_generations.iter().rev().filter(|(gen_index, generation)| {
                         let within_window = bucket_window * i <= generation.root.age
                             && generation.root.age < bucket_window * (i + 1);
                         let not_processed = !processed.contains(gen_index);
