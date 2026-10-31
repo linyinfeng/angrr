@@ -121,6 +121,11 @@
           };
         flake.githubActions = inputs.nix-github-actions.lib.mkGithubMatrix {
           checks = self.checks;
+          # nix-github-actions still pins aarch64-darwin to the retired macos-14
+          # runner image, which GitHub browns out and then removes.
+          platforms = inputs.nix-github-actions.lib.githubPlatforms // {
+            aarch64-darwin = "macos-latest";
+          };
         };
       }
     );
