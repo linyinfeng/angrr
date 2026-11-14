@@ -31,3 +31,7 @@ serde_json = "*"
 serde_regex = "*"
 ignore = "*"
 subprocess = "*"
+
+[dev-dependencies]
+# Already in Cargo.lock via dialoguer; pinned to the same major.
+tempfile = "3"
