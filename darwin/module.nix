@@ -10,18 +10,31 @@ in
 {
   imports = [ ../shared/options.nix ];
   options = {
-    services.angrr.timer = {
-      enable = lib.mkEnableOption "angrr timer";
-      dates = lib.mkOption {
-        type = with lib.types; listOf (attrsOf int);
-        default = [
-          {
-            Hour = 3;
-            Minute = 0;
-          }
-        ];
+    services.angrr = {
+      timer = {
+        enable = lib.mkEnableOption "angrr timer" // {
+          default = true;
+          example = false;
+        };
+        dates = lib.mkOption {
+          type = with lib.types; listOf (attrsOf int);
+          default = [
+            {
+              Hour = 3;
+              Minute = 0;
+            }
+          ];
+          description = ''
+            How often or when the retention policy is performed.
+          '';
+        };
+      };
+      logFile = lib.mkOption {
+        type = with lib.types; nullOr path;
+        default = "/var/log/angrr.log";
         description = ''
-          How often or when the retention policy is performed.
+          Path to the log file for the angrr launchd daemon.
+          Set to `null` to disable file logging.
         '';
       };
     };
@@ -39,7 +52,11 @@ in
               --no-prompt \
               ${lib.escapeShellArgs cfg.extraArgs}
           '';
-          serviceConfig.RunAtLoad = false;
+          serviceConfig = {
+            RunAtLoad = false;
+            StandardOutPath = cfg.logFile;
+            StandardErrorPath = cfg.logFile;
+          };
         };
 
         environment.systemPackages = [ cfg.package ];
@@ -77,7 +94,7 @@ in
               # (https://github.com/nix-darwin/nix-darwin/blob/7b1d394e7d9112d4060e12ef3271b38a7c43e83b/pkgs/nix-tools/default.nix#L7)
               profile-paths = [ "/nix/var/nix/profiles/system" ];
               keep-since = cfg.period;
-              keep-booted-system = true;
+              # nix-darwin has no /run/booted-system
               keep-current-system = true;
             };
             user = {
