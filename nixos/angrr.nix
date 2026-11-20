@@ -313,7 +313,7 @@ in
         default = null;
         description = ''
           If set, it configures {option}`services.angrr.settings` to a preset that
-          monitor .direnv, results, system, and user profiles,
+          monitors .direnv, results, system, and user profiles,
           retaining GC roots that are younger than the specified period.
         '';
       };

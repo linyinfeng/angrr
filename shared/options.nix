@@ -311,7 +311,9 @@ in
         type = with lib.types; nullOr str;
         default = null;
         description = ''
-          Retention period for the GC roots matched by this policy.
+          If set, it configures {option}`services.angrr.settings` to a preset that
+          monitors .direnv, results, system, and user profiles,
+          retaining GC roots that are younger than the specified period.
         '';
       };
       settings = lib.mkOption {
