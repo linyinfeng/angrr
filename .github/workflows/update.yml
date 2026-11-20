@@ -59,13 +59,23 @@ jobs:
           git push --set-upstream origin update --force
       - name: Create pull request
         run: |
-          # Create the update PR, or refresh its body when the PR already exists.
-          gh pr create \
-            --base main \
-            --head update \
-            --title "Automated update" \
-            --body "Automated Nix flake and Cargo dependency updates." || \
-          gh pr edit update \
-            --body "Automated Nix flake and Cargo dependency updates."
+          if git diff --quiet main HEAD; then
+            echo "no changes relative to main, skip update PR"
+            exit 0
+          fi
+          # Create the update PR, or refresh its body and label when it already exists.
+          pr="$(gh pr list --base main --head update --state open --json number --jq '.[0].number // empty')"
+          if [ -n "$pr" ]; then
+            gh pr edit "$pr" \
+              --add-label "auto update" \
+              --body "Automated Nix flake and Cargo dependency updates."
+          else
+            gh pr create \
+              --base main \
+              --head update \
+              --title "Automated update" \
+              --label "auto update" \
+              --body "Automated Nix flake and Cargo dependency updates."
+          fi
         env:
           GITHUB_TOKEN: "${{ secrets.PAT_FOR_AUTOMATED_UPDATE }}"
