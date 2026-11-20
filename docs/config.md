@@ -47,7 +47,7 @@ EXAMPLE_CONFIG_PLACEHOLDER
     See **TEMPORARY ROOT POLICY OPTIONS** for details.
 
 **profile-policies** = [\<policy1\>, \<policy2\>, ...]
-:   List of temporary root policies.
+:   List of profile policies.
 
     See **PROFILE POLICY OPTIONS** for details.
 
@@ -56,7 +56,7 @@ EXAMPLE_CONFIG_PLACEHOLDER
 
     See **TOUCH OPTIONS** for details.
 
-# COMMMON POLICY OPTIONS
+# COMMON POLICY OPTIONS
 
 **enable** = \<bool\>
 :   Enable or disable this policy. Default is `true`.
@@ -85,7 +85,7 @@ See **COMMON POLICY OPTIONS** for common options.
     stdin of the program. If the program exits with code 0, then the
     path will be monitored; otherwise it will be ignored.
 
-    SEE **FILTER OPTIONS** for more information.
+    See **FILTER OPTIONS** for more information.
 
 **ignore-prefixes** = [\<prefix1\>, \<prefix2\>, ...]
 :   A list of path prefixes (absolute) to ignore.
@@ -122,7 +122,7 @@ See **COMMON POLICY OPTIONS** for common options.
     When `owned-only = true`, if the option begins with `~`,
     it will be expanded to the home directory of the current user.
 
-    When `owned-only = false`, if the options begins with `~`,
+    When `owned-only = false`, if the option begins with `~`,
     it will be expanded to the home of all users discovered respectively.
 
 **keep-since** = \<duration\>
@@ -146,9 +146,9 @@ See **COMMON POLICY OPTIONS** for common options.
 
     `n` defaults to 1.
 
-    Each rule may retain up to `n` generations every `bucket-window` duration for `bucket-amount` buckets.
-    allowing for keeping generations for long time, but with sparser old generations.
-    This can be useful when access to old generations in wanted,
+    Each rule retains up to `n` generations every `bucket-window` duration for `bucket-amount` buckets,
+    allowing generations to be kept over a long period with sparser older generations.
+    This is useful when access to old generations is wanted,
     but keeping every generation in between is considered a waste of space.
 
     This attribute is inspired by the
@@ -156,27 +156,27 @@ See **COMMON POLICY OPTIONS** for common options.
     backup scheme.
 
     Take the configuration `{ n = 1; bucket-window = "1 Month"; bucket-amount = 2; }` as an example.
-    Angrr will then, for algorithm purposes, create two logical buckets,
-    that span respectively `[now to -30 days)` and `[-30 days to -60 days)`,
-    and both these buckets will have maximum capacity of 1 (`n`) items (generations).
+    Angrr will create two logical buckets spanning `[now to -30 days)` and `[-30 days to -60 days)`,
+    each with a maximum capacity of 1 (`n`) generation.
 
     When specifying multiple rules, they will overlap with each other.
-    Ovelapping buckets/rules claim order is determined by following rules:
-    - Last rules specified in the `keep-n-per-bucket` list are checked first.
-    - Older generations claim free slots first.
-    Therefore, the order of rules declaration matters.
-    Despite, the rules should be sorted in the config from smallest `bucket-window`
-    to largest - otherwise they might not work as expected.
+    Overlapping buckets/rules claim order is determined as follows:
 
-    Whenever a generation is matching against a bucket, it going to retained, and
-    a 1 of ouf `n` slots of the that bucket will be claimed and removed from claiming for other generations.
-    When the number of available slots of reaches 0, it obviously cannot claim other generations.
-    Respectively, when the number of all buckets with at least 1 available slots reaches 0,
-    i.e. when `keep-n-per-bucket`, in total, has no more slots,
-    the remaining generations, that were also not marked to retain by other `keep-*` rules, will be deleted.
+    - Rules are checked in reverse order (from the last rule in `keep-n-per-bucket` to the first).
+    - Within each bucket, older generations claim free slots first.
 
-    `bucket-window` format is `humantime::parse_duration`, specified in the [DURATION section](#DURATION).
-    `bucket-window` is used with regard to the moment angrr is run and doesn't reflect calendar.
+    Therefore, the order in which rules are declared matters:
+    rules should be ordered from smallest `bucket-window` to largest,
+    otherwise they may not work as expected.
+
+    Whenever a generation matches a bucket with an available slot, it is retained
+    and claims 1 of the bucket's `n` slots, making it unavailable to subsequent buckets and rules.
+    Once a bucket's available slots reach 0, it cannot claim additional generations.
+    When all buckets have been processed, any remaining generations not marked for retention
+    by other `keep-*` rules will be deleted.
+
+    `bucket-window` uses the `humantime::parse_duration` format, specified in the [DURATION section](#DURATION).
+    `bucket-window` is relative to the moment angrr is run and does not follow calendar boundaries.
     For example, a period of one week represents the seven days before the run time, not the number
     of days since the start of the calendar week.
 
