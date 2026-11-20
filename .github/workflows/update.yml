@@ -44,7 +44,10 @@ jobs:
           fi
       - name: Cargo update
         run: |
-          nix develop ./nix/develop --command cargo update
+          nix develop ./nix/develop --command bash -euo pipefail -c '
+            cargo upgrade --incompatible allow --compatible ignore
+            cargo update
+          '
           if [ -z "$(git status --porcelain)" ]; then
             echo "clean, skip..."
           else

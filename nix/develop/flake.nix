@@ -114,6 +114,7 @@
               packages = with pkgs; [
                 rustup
                 rust-analyzer
+                cargo-edit
                 go-md2man
                 config.treefmt.build.wrapper
               ];
