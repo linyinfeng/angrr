@@ -11,23 +11,23 @@ repository.workspace = true
 default-run = "angrr"
 
 [dependencies]
-clap = { version = "*", features = ["cargo", "derive"] }
-clap_complete = "*"
-figment = { version = "*", features = ["toml", "env", "json"] }
-toml = "*"
-rust-embed = "*"
-log = { version = "*", features = ["serde"] }
-env_logger = "*"
-anyhow = "*"
-humantime = "*"
-humantime-serde = "*"
-dialoguer = "*"
-uzers = "*"
-nix = { version = "*", features = ["fs"] }
-regex = "*"
-serde = { version = "*", features = ["derive"] }
-serde_default = "*"
-serde_json = "*"
-serde_regex = "*"
-ignore = "*"
-subprocess = "*"
+clap = { workspace = true, features = ["cargo", "derive"] }
+clap_complete.workspace = true
+figment = { workspace = true, features = ["toml", "env", "json"] }
+toml.workspace = true
+rust-embed.workspace = true
+log = { workspace = true, features = ["serde"] }
+env_logger.workspace = true
+anyhow.workspace = true
+humantime.workspace = true
+humantime-serde.workspace = true
+dialoguer.workspace = true
+uzers.workspace = true
+nix = { workspace = true, features = ["fs"] }
+regex.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_default.workspace = true
+serde_json.workspace = true
+serde_regex.workspace = true
+ignore.workspace = true
+subprocess.workspace = true

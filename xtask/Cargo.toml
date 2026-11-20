@@ -6,8 +6,8 @@ publish = false
 
 [dependencies]
 angrr = { path = "../angrr" }
-clap = { version = "*", features = ["cargo", "derive"] }
-clap_complete = "*"
-clap_mangen = "*"
-anyhow = "*"
-xshell = "*"
+clap = { workspace = true, features = ["cargo", "derive"] }
+clap_complete.workspace = true
+clap_mangen.workspace = true
+anyhow.workspace = true
+xshell.workspace = true
