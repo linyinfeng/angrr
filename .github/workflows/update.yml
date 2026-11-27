@@ -22,7 +22,7 @@ jobs:
           git branch --force update main
           git checkout update
       - name: Install nix
-        uses: cachix/install-nix-action@v31
+        uses: cachix/install-nix-action@v32
         with:
           github_access_token: "${{ secrets.GITHUB_TOKEN }}"
       - name: Setup cachix
