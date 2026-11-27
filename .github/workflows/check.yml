@@ -20,7 +20,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Install nix
-        uses: cachix/install-nix-action@v31
+        uses: cachix/install-nix-action@v32
         with:
           github_access_token: "${{ secrets.GITHUB_TOKEN }}"
       - id: set-matrix
@@ -41,7 +41,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Install nix
-        uses: cachix/install-nix-action@v31
+        uses: cachix/install-nix-action@v32
         with:
           github_access_token: "${{ secrets.GITHUB_TOKEN }}"
           enable_kvm: true
@@ -60,7 +60,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Install nix
-        uses: cachix/install-nix-action@v31
+        uses: cachix/install-nix-action@v32
         with:
           github_access_token: "${{ secrets.GITHUB_TOKEN }}"
       - name: Check default.nix
@@ -76,7 +76,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Install nix
-        uses: cachix/install-nix-action@v31
+        uses: cachix/install-nix-action@v32
         with:
           github_access_token: "${{ secrets.GITHUB_TOKEN }}"
       - name: Setup cachix
